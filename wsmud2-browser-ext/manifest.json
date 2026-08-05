@@ -1,0 +1,67 @@
+{
+  "manifest_version": 3,
+  "name": "WSMUD 插件",
+  "version": "26.1",
+  "description": "增强《MUD游戏，武神传说》的游戏体验",
+  "permissions": [
+    "storage",
+    "declarativeNetRequest",
+    "tabs"
+  ],
+  "host_permissions": [
+    "*://*.wsmud2.com/*",
+    "*://120.79.248.245/*"
+  ],
+  "declarative_net_request": {
+    "rule_resources": [
+      {
+        "id": "ruleset_1",
+        "enabled": true,
+        "path": "rules.json"
+      }
+    ]
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "*://*.wsmud2.com/*",
+        "*://120.79.248.245/*"
+      ],
+      "js": [
+        "content.js"
+      ],
+      "run_at": "document_start"
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "ws-js/**/*.js",
+        "ws-data/complete.mp3",
+        "ws-data/JetBrainsMono-Regular.woff2",
+        "ws-data/武神2综合工具网页版.html",
+        "ws-data/tailwind-config.js",
+        "ws-data/tailwind.js",
+        "ws-data/武神2综合工具网页版-data.js",
+        "ws-data/武神2综合工具网页版.js"
+      ],
+      "matches": [
+        "*://*.wsmud2.com/*",
+        "*://120.79.248.245/*"
+      ]
+    }
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; object-src 'self'"
+  },
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "WSMUD 插件控制"
+  },
+  "icons": {
+    "128": "ws-data/icon128.png"
+  }
+}
