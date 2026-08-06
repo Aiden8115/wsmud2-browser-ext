@@ -5,10 +5,9 @@
 //UI
 var UI = {
     codeInput: `<div class="runtest layui-layer-wrap" style="display: none;">
-                     <textarea class="site-demo-text" id="testmain" data-enpassusermodified="yes">
-                     //<-第一行输入双斜杠即可运行流程命令 ,第一行输入#js 即可运行JS\n
+                    <textarea class="site-demo-text" id="testmain" data-enpassusermodified="yes">
                     </textarea>
-                    <a class="layui-btn layui-btn-normal runtesta" style="position:absolute;right:20px;bottom:20px"  >立即运行</a>
+                    <a class="layui-btn layui-btn-normal runtesta" style="position:absolute;right:20px;bottom:20px"  >运行</a>
                  </div>`,
     zdybtnui: function () {
         let ui = `<div class='WG_button'>`;

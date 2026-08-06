@@ -446,7 +446,7 @@ var TaskHelper = {
 };
 var ProConsole = {
     init: function () {
-        //判断
+        // 判断
         if (!LayerHelper.isMobile()) {
             layer.open({
                 type: 1,

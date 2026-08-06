@@ -206,7 +206,7 @@ var GlobalInit = {
                     }
                     
                     //  获得物品设置   
-                    if (getitemShow = "开" && !data.name.includes("<wht>")){
+                    if (getitemShow == "开" && !data.name.includes("<wht>")){
                         let count = index == -1 ? data.count : data.count - old_count;
                         let id = data.id;
                         let str;
@@ -216,13 +216,12 @@ var GlobalInit = {
                         }
                         if (!itemTotalCount[id]) {
                             itemTotalCount[id] = 0;
-                        } else if (itemTotalCount[id]<0){return};
+                        } else if (itemTotalCount[id]<0) return;
                         
                         itemTotalCount[id] += count;
                         str = `获得<hiw>${itemTotalCount[id]}</hiw>${data.unit}${data.name}，共有<hiw>${data.count}</hiw>${data.unit}`;
                         messageAppend(str, 0, id)
                     }
-
                 }
                 if (data.can_use || data.can_open) {
                     //生成快速使用按钮

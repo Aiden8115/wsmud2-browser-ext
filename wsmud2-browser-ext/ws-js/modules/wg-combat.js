@@ -226,6 +226,7 @@ Object.assign(WG, {
                 cmd_echo = true;
                 ProConsole.init();
                 messageAppend("<hio>命令代码显示</hio>");
+                messageAppend("<hio>第一行输入“//”即可运行流程命令，第一行输入“#js”即可运行JavaScript。</hio>");
             }
         },
         getItemNameByid: (id, callback) => {
@@ -506,7 +507,7 @@ Object.assign(WG, {
                                                     await WG.sleep(200);
                                                 }
                                                 if (WG.hasStr(buf, GameState.selfStatus)) {
-                                                    console.log('buf技能' + skill.id)
+                                                    console.log('buff技能' + skill.id)
                                                     WG.bufskill[buf] = skill.id;
                                                 }
                                                 // alreay_pfm.push(skill.id)
@@ -529,7 +530,7 @@ Object.assign(WG, {
 
                                         }
                                         if (WG.hasStr("force", GameState.selfStatus)) {
-                                            console.log('内功buf技能' + skill.id)
+                                            console.log('内功buff技能' + skill.id)
                                             WG.forcebufskil = skill.id;
                                         }
                                         alreay_pfm.push(skill.id)
@@ -555,7 +556,7 @@ Object.assign(WG, {
                                 if (WG.forcebufskil != '') {
                                     if (!WG.gcd && !WG.cds.get(skill.id)?.iscd && WG.hasStr(skill.id, force_buff_skill) && skill.id != WG.forcebufskil &&
                                         !WG.hasStr(skill.id, buff_skill_dict['mingyu']) && !WG.hasStr(skill.id, buff_skill_dict['ztd'])) {
-                                        console.log('使用无buf的内功技能' + skill.id)
+                                        console.log('使用无buff的内功技能' + skill.id)
                                         WG.Send("perform " + skill.id);
                                         if (!WG.is_free()) break;
                                     }
@@ -563,7 +564,7 @@ Object.assign(WG, {
                                 // if (WG.bufskill.hasOwnProperty('weapon') && WG.bufskill['weapon'] != '') {
                                 //     if (!WG.gcd && !WG.cds.get(skill.id) && WG.hasStr(skill.id, buff_skill_dict) && skill.id != WG.bufskill['weapon'] &&
                                 //         !WG.hasStr(skill.id, buff_skill_dict['mingyu']) && !WG.hasStr(skill.id, buff_skill_dict['ztd'])) {
-                                //         console.log('使用无buf的武器技能' + skill.id)
+                                //         console.log('使用无buff的武器技能' + skill.id)
                                 //         WG.Send("perform " + skill.id);
                                 //         if (!WG.is_free()) break;
                                 //     }
@@ -635,7 +636,7 @@ Object.assign(WG, {
             messageAppend(`<hiy>已关闭自动领取boss，下次领取前请重新开启</hiy>`)
 
             timer = setTimeout(() => {
-                if (auto_command && auto_command != null && auto_command != "" && auto_command != "null") {
+                if (auto_command && auto_command != "" && auto_command != "null") {
                     WG.SendCmd(auto_command);
                 } else {
                     WG.zdwk();
@@ -660,7 +661,7 @@ Object.assign(WG, {
             WG.SendCmd("$wait 1000");
             WG.SendCmd("events marry ok");
             timer = setTimeout(() => {
-                if (auto_command && auto_command != null && auto_command != "" && auto_command != "null") {
+                if (auto_command && auto_command != "" && auto_command != "null") {
                     WG.SendCmd(auto_command);
                 } else {
                     WG.zdwk();

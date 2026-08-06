@@ -1224,7 +1224,7 @@ var Process = {
             return;
         for (var _n22 = 0; _n22 < _t205.length; _n22++) {
             var _a14 = [];
-            _a14.push("<span class='pfm-item' id='" + _t205[_n22].id + '\x27>');
+            _a14.push("<span class='pfm-item' pid='" + _t205[_n22].id + '\x27>');
             _a14.push(_t205[_n22].name);
             _a14.push('</span>');
             _t205[_n22].elem = $(_a14.join('')).appendTo(_J43);

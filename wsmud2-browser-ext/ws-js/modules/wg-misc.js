@@ -1,5 +1,5 @@
 // wg-misc.js
-// WG misc: custom buttons, settings, login html
+// WG misc: custom buttons, settings, login HTML
 'use strict';
 
 Object.assign(WG, {
@@ -241,19 +241,21 @@ Object.assign(WG, {
           }
 
           if (data.type == 'text' && data.msg == '什么？' && GameState.wsdelay.SetTime != undefined) {
+              const time = new Date().getTime();
               if (GameState.wsdelay.SetCount <= 2) {
                   GameState.wsdelay.SetCount += 1;
                   if (GameState.wsdelay.delay == undefined) {
-                      GameState.wsdelay.delay = new Date().getTime() - GameState.wsdelay.SetTime;
+                      GameState.wsdelay.delay = time - GameState.wsdelay.SetTime;
                   } else {
-                      GameState.wsdelay.delay = (new Date().getTime() - GameState.wsdelay.SetTime + GameState.wsdelay.delay) / 2
+                      GameState.wsdelay.delay = (time - GameState.wsdelay.SetTime + GameState.wsdelay.delay) / 2;
                   }
-                  GameState.wsdelay.SetTime = new Date().getTime()
-                  WG.SendCmd("test")
+                  GameState.wsdelay.SetTime = time;
+                  WG.SendCmd("test");
               } else {
 
-                  GameState.wsdelay.delay = (new Date().getTime() - GameState.wsdelay.SetTime + GameState.wsdelay.delay) / 2
-                  WG.SendCmd("tm 服务器到本地来回延迟约 " + GameState.wsdelay.delay + " 毫秒")
+                  GameState.wsdelay.delay = (time - GameState.wsdelay.SetTime + GameState.wsdelay.delay) / 2;
+                  WG.SendCmd("state info");
+                  messageAppend(`<hig>服务器到本地来回延迟约 ${GameState.wsdelay.delay} 毫秒</hig>`);
                   GameState.wsdelay.SetTime = undefined;
                   GameState.wsdelay.SetCount = undefined;
                   setTimeout(() => {
