@@ -202,14 +202,6 @@
             eventDesc = "挖矿获得经验+" + (match[1] ?? "???");
         }
 
-        if (event.tit == "门派战争") {
-            const regEnemy = /你的门派和(.+?)战斗结束了/;
-            const match = eventDesc.match(regEnemy) ?? ["???", "???"];
-            const enemy = match[1];
-            const hasInspire = /获得鼓舞/.test(eventDesc);
-            eventDesc = "你的门派和" + enemy + "战斗结束，" + (hasInspire ? "赢了，练功效率+20%。" : "输了。");
-        }
-
         console.log(eventDesc);
         return $(`<div class="events-event"></div>`).append(
             $(`<div class="events-box-left"></div>`).append(
