@@ -179,7 +179,7 @@ Object.assign(WG, {
           var html = UI.wgui();
           $(".content-message").after(html);
           $('.content-bottom').after("<div class='zdy-commands'></div>");
-          var css = `.zdy-item{
+          const css = `.zdy-item{
               display: inline-block;
               border: solid 1px gray;
               color: gray;
@@ -229,36 +229,36 @@ Object.assign(WG, {
                   background-repeat: no-repeat;
               }
               .WG_log{
-              flex: 1;
-              overflow-y: auto;
-              border: 1px solid #404040;
-              max-height: 10em;
-              width: calc(100% - 40px);
-              border-radius: 0.5em;
+                flex: 1;
+                overflow-y: auto;
+                border: 1px solid #404040;
+                max-height: 10em;
+                width: calc(100% - 10px);
+                border-radius: 0.5em;
               }
               .WG_log > pre {
-              margin: 0px;
-              white-space: pre-line;
+                margin: 0px;
+                white-space: pre-line;
               }
-              .WG_log_log{
-              flex: 1;
-              overflow-y: auto;
-              border: 1px solid #303030;
-              max-height: 25em;
-              width: calc(100% - 40px);
-              border-radius: 0.5em;
-              margin-top: 4px;
-              background-color: rgba(0, 0, 0, 0.3);
-              display: flex;
-              flex-direction: column;
+              .WG_log_log {
+                flex: 1;
+                overflow-y: auto;
+                border: 1px solid #303030;
+                max-height: 25em;
+                width: calc(100% - 10px);
+                border-radius: 0.5em;
+                margin-top: 4px;
+                background-color: rgba(0, 0, 0, 0.3);
+                display: flex;
+                flex-direction: column;
               }
               .WG_log_log_title {
-              color: #ffffff;
-              font-size: 14px;
-              font-weight: bold;
-              padding: 4px 10px;
-              border-bottom: 1px solid rgba(255,255,255,0.25);
-              flex-shrink: 0;
+                color: #ffffff;
+                font-size: 14px;
+                font-weight: bold;
+                padding: 4px 10px;
+                border-bottom: 1px solid rgba(255,255,255,0.25);
+                flex-shrink: 0;
               }
               .WG_log_log > pre {
               margin: 0px;
@@ -903,7 +903,7 @@ Object.assign(WG, {
               roleid = roleid;
               var logintext = '';
               document.title = role + "-MUD游戏-武神传说";
-              LayerHelper.msg(`欢迎使用， 版本号${GM_info.script.version}`);
+              LayerHelper.msg(`欢迎使用，版本号${GM_info.script.version}`);
               // 自动打开栏目
               KEY.do_command("showtool")
               KEY.do_command("showcombat");

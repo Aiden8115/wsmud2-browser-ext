@@ -32,14 +32,14 @@ var UI = {
         } else {
             p = UI.btnui();
         }
-        return ` <div class='WG_log_log'>
-                <div class="WG_log_log_title">日志</div>
-                <pre></pre>
-            </div>
+        return `
             <div class='WG_log'>
                 <pre></pre>
-            </div>` +
-            p;
+            </div>
+            <div class='WG_log_log'>
+                <div class="WG_log_log_title">日志</div>
+                <pre></pre>
+            </div>` + p;
     },
     cleandataui: function() {
         return `
@@ -329,12 +329,10 @@ var UI = {
         return ui;
     },
     xiangqianui: function (id) {
-        let ui = `<div class="item-commands "><span cmd="unxiangqian ${id}" style="color: #00FFFF"> 取消镶嵌 </span></div>`;
-        return ui;
+        return `<div class="item-commands "><span cmd="unxiangqian ${id}" style="color: #00FFFF"> 取消镶嵌 </span></div>`;
     },
     jinglianui: function (id) {
-        let ui = `<div id="fastjinglian" style="display: flex; flex-direction: column; line-height: normal;"><div style="display: flex; align-items: center; gap: 4px;"><div id="jinglian-slider" style="flex: 1; min-width: 0; height: 32px; display: flex; align-items: center; position: relative;"><input type="range" min="0" max="12" step="1" value="0" id="jinglian-slider-input" style="width: 100%; height: 8px; outline: none;"></div><div id="jinglian-slider-number" style="min-width: 2.5em; text-align: center; font-weight: bold;color: #FF4500"></div></div><div style="display: flex; justify-content: space-between; align-items: center; padding: 0px 4px; margin: 0; flex-wrap: wrap;"><div style="display: flex; align-items: center; gap: 4px"><span>⟶</span><span class="item-commands"><span id="jinglian-preview"></span></span></div><div style="flex: 0 0 auto; line-height: 0;"><span id="jinglian-cost" style="font-size: 14px;;"></span><span style="font-size: 14px;color: #00FF00">&nbsp;玄晶</span></div></div></div><div class="item-commands" style="padding: 4px 16px;"><span cmd="unjinglian ${id}" style="color: #00FFFF">取消精炼</span></div>`;
-        return ui;
+        return `<div id="fastjinglian" style="display: flex; flex-direction: column; line-height: normal;"><div style="display: flex; align-items: center; gap: 4px;"><div id="jinglian-slider" style="flex: 1; min-width: 0; height: 32px; display: flex; align-items: center; position: relative;"><input type="range" min="0" max="12" step="1" value="0" id="jinglian-slider-input" style="width: 100%; height: 8px; outline: none;"></div><div id="jinglian-slider-number" style="min-width: 2.5em; text-align: center; font-weight: bold;color: #FF4500"></div></div><div style="display: flex; justify-content: space-between; align-items: center; padding: 0px 4px; margin: 0; flex-wrap: wrap;"><div style="display: flex; align-items: center; gap: 4px"><span>⟶</span><span class="item-commands"><span id="jinglian-preview"></span></span></div><div style="flex: 0 0 auto; line-height: 0;"><span id="jinglian-cost" style="font-size: 14px;;"></span><span style="font-size: 14px;color: #00FF00">&nbsp;玄晶</span></div></div></div><div class="item-commands" style="padding: 4px 16px;"><span cmd="unjinglian ${id}" style="color: #00FFFF">取消精炼</span></div>`;
     },
 
 }

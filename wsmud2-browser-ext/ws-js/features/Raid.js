@@ -4219,11 +4219,12 @@ $to 住房-练功房;dazuo
             <div id="raidToolbar">
                 <div class="raidToolbar" style="width:calc(100% - 40px);margin:5px 0 5px 0">
                     <span class="raid-item hideRaidToolbar" style="width:15px"><hic>&#9660;</span>
-                    <span class="raid-item forum">🐟 <hiy>快捷</hiy></span>
-                    <span class="raid-item shortcut">🍯 <hiz>功能</hiz></span>
-                    <span class="raid-item trigger">🍟 <hio>触发</hio></span>
-                    <span class="raid-item customFlow" id="workflows-button">🥗 <hig>流程</hig></span>
-                    <span class="raid-item moreRaid">🍺 <hic>副本</hic></span>
+                    <span class="raid-item forum"><hiy>快捷</hiy></span>
+                    <span class="raid-item shortcut"><hiz>功能</hiz></span>
+                    <span class="raid-item trigger"><hio>触发</hio></span>
+                    <span class="raid-item customFlow" id="workflows-button"><hig>流程</hig></span>
+                    <span class="raid-item moreRaid"><hic>副本</hic></span>
+                    <span class="raid-item commandLine"><hir>命令</hir></span>
                 </div>
             </div>`
             $(".WG_log").before(raidToolbar);
@@ -4232,6 +4233,7 @@ $to 住房-练功房;dazuo
             $(".forum").on('click', UI.forum);
             $(".shortcut").on('click', UI.shortcut);
             $(".moreRaid").on('click', UI.dungeons);
+            $(".commandLine").on('click', UI.commandLine);
             $(".hideRaidToolbar").on('click', UI.hideToolbar);
         },
         hideToolbar: function () {
@@ -4451,6 +4453,35 @@ $to 住房-练功房;dazuo
             const model = UI._dungeonsContentModel();
             UI._mountableDiv().appendChild(model.$el);
         },
+        commandLine: function () {
+            messageAppend("[命令提示] <hio>第一行输入“//”即可运行流程命令，第一行输入“#js”即可运行JavaScript</hio>");
+            const lastrun = GM_getValue("_lastrun", "");
+            const content = `
+            <textarea id="cmdline-input" class="settingbox hide" style="display:inline-block;height:8rem;width:calc(100% - 4em);font-size:0.8em;font-family:'JetBrains Mono',monospace;margin:0 2em">${lastrun}</textarea>
+            <div class="item-commands" style="text-align:center">
+                <span class="cmdline-run" style="width:120px"><wht>运行</wht></span>
+            </div>`;
+            UI._appendHtml("<hir>命令</hir>", content);
+            var input = $("#cmdline-input");
+            input.focusout(function () {
+                GM_setValue("_lastrun", input.val());
+            });
+            $(".cmdline-run").on('click', function () {
+                var text = input.val();
+                if (!text) return;
+                if (text.split("\n")[0].indexOf("//") >= 0) {
+                    if (unsafeWindow && unsafeWindow.ToRaid) {
+                        ToRaid.perform(text);
+                    }
+                } else if (text.split("\n")[0].indexOf("#js") >= 0) {
+                    var jscode = text.split("\n");
+                    jscode.baoremove(0);
+                    eval(jscode.join(""));
+                } else {
+                    WG.SendCmd(text);
+                }
+            });
+        },
 
         workflows: function () {
             if (ManagedPerformerCenter.getAll().length == 0) {
@@ -4629,9 +4660,9 @@ $to 住房-练功房;dazuo
             var html = `
             <div class = "item-commands" style="text-align:center">
                 <div style="margin-top:0.5em">
-                    <div style="width:6em;float:left;text-align:left;padding:0px 0px 0px 2em;height:1.23em" id="wsmud_raid_left">${finalLeftText}</div>
+                    <div style="width:6em;float:left;text-align:left;padding:0 0 0 2em;height:1.23em" id="wsmud_raid_left">${finalLeftText}</div>
                     <div style="width:calc(100% - 16em);float:left;text-align:center;height:1.23em">${title}</div>
-                    <div style="width:6em;float:right;text-align:right;padding:0px 2em 0px 0px;height:1.23em" id="wsmud_raid_right">${finalRightText}</div>
+                    <div style="width:6em;float:right;text-align:right;padding:0 2em 0 0;height:1.23em" id="wsmud_raid_right">${finalRightText}</div>
                 </div>
                 <br><br>
                 ${content}
@@ -4652,7 +4683,7 @@ $to 住房-练功房;dazuo
             return div;
         },
         _workflowContentModel: function (items) {
-            const contentModel = new Vue({
+            return new Vue({
                 el: '#WorkflowsContentModel',
                 methods: {
                     createSpan: function (createElement, item) {
@@ -4699,7 +4730,7 @@ $to 住房-练功房;dazuo
                                 "background-color": "#ffffff4f",
                                 "border-radius": "4px"
                             },
-                            on: { click: edit }
+                            on: {click: edit}
                         };
                         const leftNode = createElement("div", leftProperties, "⚙");
                         const mainProperties = {
@@ -4723,22 +4754,28 @@ $to 住房-练功房;dazuo
                     let nodes = [];
                     if (flows.length > 0) nodes.push(flows);
                     if (finders.length > 0) {
-                        nodes.push(createElement("hr", { style: { "background-color": "gray", height: "1px", width: "calc(100% - 4em)", border: "none" } }));
+                        nodes.push(createElement("hr", {
+                            style: {
+                                "background-color": "gray",
+                                height: "1px",
+                                width: "calc(100% - 4em)",
+                                border: "none"
+                            }
+                        }));
                         nodes.push(finders);
                     }
                     const style = createElement("style", ".breakText {word-break:keep-all;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}");
                     nodes.push(style);
                     return createElement(
                         "div",
-                        { attrs: { class: "item-commands" } },
+                        {attrs: {class: "item-commands"}},
                         nodes
                     );
                 }
             });
-            return contentModel;
         },
         _dungeonsContentModel: function () {
-            const contentModel = new Vue({
+            return new Vue({
                 el: '#DungeonsContentModel',
                 methods: {
                     getItems: function () {
@@ -4746,12 +4783,13 @@ $to 住房-练功房;dazuo
                     },
                     createSpan: function (createElement, item) {
                         var properties = {
-                            attrs: { class: "zdy-item" },
+                            attrs: {class: "zdy-item"},
                             style: {
                                 width: "120px",
                                 height: "30px",
                                 "line-height": "30px",
-                                "border-radius": "0.5em"},
+                                "border-radius": "0.5em"
+                            },
                             on: {
                                 click: function () {
                                     ManagedPerformerCenter.start(`自动副本-${item.name}`, GetDungeonSource(item.name));
@@ -4769,12 +4807,11 @@ $to 住房-练功房;dazuo
                     });
                     return createElement(
                         "div",
-                        { attrs: { class: "item-commands" } },
+                        {attrs: {class: "item-commands"}},
                         spans
                     );
                 }
             });
-            return contentModel;
         },
         _runningFlowsContentModel: function () {
             return new Vue({

@@ -47,11 +47,16 @@
         "ws-js/core/wslogin.js",
         "ws-js/features/Trigger.js",
         "ws-js/core/login-core.js",
+        // --- 原 ws.js 拆分开始 ---
+        "ws-js/modules/dialog-base.js",
+        "ws-js/modules/dialog-panels.js",
+        "ws-js/modules/extension-manager.js",
+        // --- 原 ws.js 拆分结束 ---
         "ws-js/core/ws.js"
     ];
 
     // funny2.js 在脚本序列中的插入位置（位于 main-ready.js 之后、Raid.js 之前）
-    const FUNNY2_INSERT_INDEX = 25;
+    const FUNNY2_INSERT_INDEX = 28;
 
     let extensionEnabled = true;
     let loadFunny2 = true;

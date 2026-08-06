@@ -65,7 +65,7 @@ Object.assign(WG, {
                   cmd = cmd instanceof Array ? cmd : cmd.split(';');
                   for (var c of cmd) {
                       $("span[WG='WG']").attr("cmd", c).click();
-                  };
+                  }
               }
           }
       },
@@ -224,9 +224,7 @@ Object.assign(WG, {
                 messageAppend("<hio>命令代码关闭</hio>");
             } else {
                 cmd_echo = true;
-                ProConsole.init();
                 messageAppend("<hio>命令代码显示</hio>");
-                messageAppend("<hio>第一行输入“//”即可运行流程命令，第一行输入“#js”即可运行JavaScript。</hio>");
             }
         },
         getItemNameByid: (id, callback) => {

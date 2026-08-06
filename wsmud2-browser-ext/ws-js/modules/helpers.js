@@ -3,7 +3,7 @@
 'use strict';
 
 //助手函数
-var TaskHelper = {
+const TaskHelper = {
     //private
     _recmd: function (cmds) {
         if (cmds) {
@@ -379,7 +379,7 @@ var TaskHelper = {
     startallauto: function (idx, n, cmds) {
         cmds = TaskHelper.recmd(idx, cmds);
         WG.reSetAllAuto();
-        messageAppend("暂停自动喜宴及自动BOSS",1);
+        messageAppend("暂停自动喜宴及自动BOSS", 1);
         WG.SendCmd(cmds);
     },
     roll: function (idx, n, cmds) {
@@ -441,72 +441,5 @@ var TaskHelper = {
         });
         WG.SendCmd(cmds);
     }
-
-
 };
-var ProConsole = {
-    init: function () {
-        // 判断
-        if (!LayerHelper.isMobile()) {
-            layer.open({
-                type: 1,
-                title: "运行命令",
-                shade: false,
-                offset: "rb",
-                zIndex: 961024,
-                success: function (layero, index) {
-                    $(".runtesta").show();
-                },
-                content: $(".runtest"),
-                end: function () {
-                    $(".runtesta").off("click");
-                    $(".runtesta").hide();
-                }
-            });
-            var lastrun = GM_getValue("_lastrun", "");
-            if (lastrun != "") {
-                $("#testmain").val(lastrun);
-            }
-            $(".runtesta").off("click");
-            $(".runtesta").on('click', function () {
-                if ($('#testmain').val().split("\n")[0].indexOf("//") >= 0) {
-                    if (unsafeWindow && unsafeWindow.ToRaid) {
-                        ToRaid.perform($('#testmain').val());
-                    }
-                } else if ($('#testmain').val().split("\n")[0].indexOf("#js") >= 0) {
-                    var jscode = $('#testmain').val().split("\n");
-                    jscode.baoremove(0)
-                    eval(jscode.join(""));
-                } else {
-                    WG.SendCmd($('#testmain').val());
-                }
-
-            });
-            $("#testmain").focusout(function () {
-                GM_setValue("_lastrun", $('#testmain').val());
-            })
-        } else {
-            layer.prompt({ title: '请输入...', formType: 2 }, function (text, index) {
-                layer.close(index);
-                if (text != null) {
-                    if (text.split("\n")[0].indexOf("//") >= 0) {
-                        if (unsafeWindow && unsafeWindow.ToRaid) {
-                            ToRaid.perform(text);
-                        }
-                    } else if (text.split("\n")[0].indexOf("#js") >= 0) {
-                        var jscode = text.split("\n");
-                        jscode.baoremove(0)
-                        eval(jscode.join(""));
-                    } else {
-                        WG.SendCmd(text);
-                    }
-                }
-            });
-        }
-
-    },
-    close: function () {
-        layer.close();
-    }
-}
-var T = TaskHelper;
+const T = TaskHelper;

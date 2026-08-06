@@ -656,7 +656,7 @@
           $(`<span class="span-btn"></span>`).append("门战").click(toSchoolMPZ),
           $(`<span class="span-btn"></span>`).append("后勤").click(toSchoolHQ),
           $(`<span class="span-btn"></span>`).append("当铺").click(() => SendCommand("$to 扬州城-当铺;$wait 200;list {r唐楠};")),
-          $(`<span class="span-btn"></span>`).append("仓库").click(() => SendCommand("$to 扬州城-钱庄")),
+          $(`<span class="span-btn"></span>`).append("仓库").click(() => SendCommand("store")),
           $(`<span class="span-btn"></span>`).append("回家").click(() => SendCommand("$to 住房")),
         ),
         $("<div></div>").append(

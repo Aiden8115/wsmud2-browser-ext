@@ -147,11 +147,7 @@ $(document).ready(function () {
                 "打开仓库": {
                     name: "打开仓库",
                     callback: function (key, opt) {
-                        if (WG.at("扬州城-钱庄")) {
-                            WG.Send("store");
-                        } else {
-                            WG.go("扬州城-钱庄");
-                        }
+                        WG.Send("store");
                     },
                 },
                 "关闭自动": {
