@@ -4524,11 +4524,6 @@ $to 住房-练功房;dazuo
                         break;
                 };
             });
-            // $('#workflows-sort').val(WorkflowConfig.rootFinderSortWay());
-            // $("#workflows-sort").change(function () {
-            //     WorkflowConfig.rootFinderSortWay($('#workflows-sort').val());
-            //     UI.workflows();
-            // });
             const model = UI._workflowContentModel(WorkflowConfig.finderList(WorkflowConfig.rootFinderName));
             UI._mountableDiv().appendChild(model.$el);
         },
@@ -4546,12 +4541,13 @@ $to 住房-练功房;dazuo
                 const name = $("#create-finder-name").val();
                 const result = WorkflowConfig.createFinder(name);
                 if (result == true) {
+                    UI._closeModal();
                     UI.workflowsHome();
                 } else {
                     alert(result);
                 }
             };
-            UI._appendHtml("🥗 <hig>新建文件夹</hig>", content, "<wht>保存</wht>", save, UI._backTitle, UI.workflowsHome);
+            UI._showModal("🥗 <hig>新建文件夹</hig>", content, "<wht>保存</wht>", save, UI._backTitle, function () { UI._closeModal(); UI.workflowsHome(); });
         },
         modifyFinder: function (finder) {
             const content = `
@@ -4562,6 +4558,7 @@ $to 住房-练功房;dazuo
                 var verify = confirm("删除文件夹将删除其中的所有流程，确认删除吗？");
                 if (verify) {
                     WorkflowConfig.removeFinder(finder);
+                    UI._closeModal();
                     UI.workflowsHome();
                 }
             };
@@ -4572,9 +4569,10 @@ $to 住房-练功房;dazuo
                     alert(result);
                     return;
                 }
+                UI._closeModal();
                 UI.workflowsHome();
             };
-            UI._appendHtml("🥗 <hig>修改文件夹</hig>", content, "删除", remove, UI._backSaveTitle, back);
+            UI._showModal("🥗 <hig>修改文件夹</hig>", content, "删除", remove, UI._backSaveTitle, back);
             $('#modify-finder-name').val(finder.name);
         },
         openFinder: function (finderName) {
@@ -4592,18 +4590,19 @@ $to 住房-练功房;dazuo
             <div style="margin: 0 2em 5px 2em;text-align:left;width:calc(100% - 4em)">
                 <label for="create-flow-name"> 名称:</label><input id ="create-flow-name" style='width:120px' type="text"  name="create-flow-name" value="">
             </div>
-            <textarea class = "settingbox hide" style = "height:5rem;display:inline-block;font-size:0.8em;width:calc(100% - 4em);font-family:'JetBrains Mono',monospace;" id = "create-flow-source"></textarea>`;
+            <textarea class = "settingbox hide" style = "height:30rem;display:inline-block;font-size:0.8em;width:calc(100% - 4em);font-family:'JetBrains Mono',monospace;" id = "create-flow-source"></textarea>`;
             const save = function () {
                 const name = $("#create-flow-name").val();
                 const source = $("#create-flow-source").val();
                 const result = WorkflowConfig.createWorkflow(name, source, finderName);
                 if (result == true) {
+                    UI._closeModal();
                     UI.workflowsHome();
                 } else {
                     alert(result);
                 }
             };
-            UI._appendHtml("🥗 <hig>新建流程</hig>", content, "<wht>保存</wht>", save, UI._backTitle, UI.workflowsHome);
+            UI._showModal("🥗 <hig>新建流程</hig>", content, "<wht>保存</wht>", save, UI._backTitle, function () { UI._closeModal(); UI.workflowsHome(); });
         },
         modifyWorkflow: function (flow) {
             let options = "";
@@ -4617,12 +4616,13 @@ $to 住房-练功房;dazuo
                     ${options}
                 </select>
             </div>
-            <textarea class = "settingbox hide" style = "height:5rem;display:inline-block;font-size:0.8em;width:calc(100% - 4em);font-family:'JetBrains Mono',monospace;" id = "modify-flow-source"></textarea>
+            <textarea class = "settingbox hide" style = "height:30rem;display:inline-block;font-size:0.8em;width:calc(100% - 4em);font-family:'JetBrains Mono',monospace;" id = "modify-flow-source"></textarea>
             <span class="raid-item shareFlow">分享此流程</span>`;
             const remove = function () {
                 var verify = confirm("确认删除此工作流程吗？");
                 if (verify) {
                     WorkflowConfig.removeWorkflow(flow);
+                    UI._closeModal();
                     UI.workflowsHome();
                 }
             };
@@ -4635,9 +4635,10 @@ $to 住房-练功房;dazuo
                     alert(result);
                     return;
                 }
+                UI._closeModal();
                 UI.openFinder(finderName);
             };
-            UI._appendHtml("🥗 <hig>修改流程</hig>", content, "删除", remove, UI._backSaveTitle, back);
+            UI._showModal("🥗 <hig>修改流程</hig>", content, "删除", remove, UI._backSaveTitle, back);
             $("#modify-flow-name").val(flow.name);
             $("#modify-flow-source").val(FlowStore.get(flow.name));
             $("#modify-flow-finder").val(flow.finder);
@@ -4676,11 +4677,42 @@ $to 住房-练功房;dazuo
                 if (rightAction) rightAction();
             });
         },
+        _closeModal: function () {
+            var el = document.getElementById('raid-modal-overlay');
+            if (el) el.remove();
+        },
         _mountableDiv: function () {
             var wg_log = document.getElementsByClassName("WG_log")[0];
             var pre = wg_log.getElementsByTagName("pre")[0];
             var div = pre.getElementsByTagName("div")[0];
             return div;
+        },
+        _showModal: function (title, content, rightText, rightAction, leftText, leftAction) {
+            UI._closeModal();
+            var finalLeftText = leftText == null ? "" : leftText;
+            var finalRightText = rightText == null ? "" : rightText;
+            var overlay = document.createElement('div');
+            overlay.id = 'raid-modal-overlay';
+            overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);z-index:9999;display:flex;align-items:center;justify-content:center;';
+            var modal = document.createElement('div');
+            modal.style.cssText = 'background:#1a1a2e;border:1px solid #555;border-radius:12px;padding:24px;width:80vw;height:75vh;max-width:95%;max-height:85vh;overflow:auto;position:relative;box-shadow:0 0 30px rgba(0,0,0,0.5);';
+            var html = `
+            <div class="item-commands" style="text-align:center">
+                <div style="margin-top:0.5em">
+                    <div style="width:12em;float:left;text-align:left;padding:0 0 0 2em;height:1.23em" id="wsmud_modal_left">${finalLeftText}</div>
+                    <div style="width:calc(100% - 18em);float:left;text-align:center;height:1.23em">${title}</div>
+                    <div style="width:6em;float:right;text-align:right;padding:0 2em 0 0;height:1.23em" id="wsmud_modal_right">${finalRightText}</div>
+                </div>
+                <br><br>
+                ${content}
+            </div>`;
+            modal.insertAdjacentHTML('beforeend', html);
+            overlay.appendChild(modal);
+            document.body.appendChild(overlay);
+            var leftEl = document.getElementById('wsmud_modal_left');
+            if (leftEl && leftAction) leftEl.onclick = function () { leftAction(); };
+            var rightEl = document.getElementById('wsmud_modal_right');
+            if (rightEl && rightAction) rightEl.onclick = function () { rightAction(); };
         },
         _workflowContentModel: function (items) {
             return new Vue({

@@ -3,18 +3,73 @@
 'use strict';
 
 Object.assign(WG, {
-      zmlztjk: function () {
-          zml = GM_getValue(roleid + "_zml", zml);
-          if (! typeof zml instanceof Array) {
-              zml = [];
+      _zmlLayerIndex: null,
+      _zmlVue: null,
+      _zmlCleanup: function () {
+          if (WG._zmlVue) {
+              WG._zmlVue.$destroy();
+              WG._zmlVue = null;
           }
-          messageClear();
-          var a = UI.zmlandztjkui;
-          messageAppend(a);
-          const zmlvue = new Vue({
-              el: "#zmlandztjk",
-              data: {
+      },
+      _zmlOpenView: function (view) {
+          // close existing layer
+          if (WG._zmlLayerIndex) {
+              layer.close(WG._zmlLayerIndex);
+          }
+          WG._zmlCleanup();
+
+          var html = '', title = '', area = [''];
+          if (view === 'main') {
+              html = UI.zmlandztjkui;
+              title = '自命令';
+              area = ['340px', '420px'];
+          } else if (view === 'zmlEdit') {
+              zml = GM_getValue(roleid + "_zml", zml);
+              html = UI.zmlsetting
+                  + '<div class="item-commands" style="margin-top:8px;border-top:1px solid #555;padding-top:8px;">'
+                  + '<span class="zml-back-btn" style="cursor:pointer;color:#aaa;">← 返回</span>'
+                  + '</div>';
+              title = '编辑自命令';
+              area = ['340px', '500px'];
+          } else if (view === 'ztjkEdit') {
+              ztjk_item = GM_getValue(roleid + "_ztjk", []);
+              html = UI.ztjksetting
+                  + '<div class="item-commands" style="margin-top:8px;border-top:1px solid #555;padding-top:8px;">'
+                  + '<span class="zml-back-btn" style="cursor:pointer;color:#aaa;">← 返回</span>'
+                  + '</div>';
+              title = '编辑自定义监控';
+              area = ['340px', '500px'];
+          }
+
+          var self = WG;
+          WG._zmlLayerIndex = layer.open({
+              type: 1,
+              skin: 'layui-layer-rim',
+              area: area,
+              title: title,
+              content: html,
+              success: function (layero) {
+                  for (var node of layero[0].children) {
+                      if (node.className === 'layui-layer-content') {
+                          node.setAttribute('style', 'max-height:450px;color:rgb(0,128,0);overflow-y:auto;');
+                          break;
+                      }
+                  }
+                  if (view === 'main') self._zmlInitMain();
+                  else if (view === 'zmlEdit') self._zmlInitZmlEdit();
+                  else if (view === 'ztjkEdit') self._zmlInitZtjkEdit();
               },
+              end: function () {
+                  WG._zmlLayerIndex = null;
+                  WG._zmlCleanup();
+              }
+          });
+      },
+      _zmlInitMain: function () {
+          var self = WG;
+          WG._zmlVue = new Vue({
+              el: '#zmlandztjk',
+              data: {},
               created() {
                   this.zmldata = zml;
               },
@@ -23,10 +78,10 @@ Object.assign(WG, {
                       WG.zmlfire(v);
                   },
                   zml: function () {
-                      WG.zml_edit();
+                      self._zmlOpenView('zmlEdit');
                   },
                   ztjk: function () {
-                      WG.ztjk_edit();
+                      self._zmlOpenView('ztjkEdit');
                   },
                   startjk: function () {
                       WG.ztjk_func();
@@ -35,15 +90,182 @@ Object.assign(WG, {
                       if (WG.ztjk_hook) {
                           WG.remove_hook(WG.ztjk_hook);
                           WG.ztjk_hook = undefined;
-                          messageAppend("<hig>已取消注入");
-                          return;
+                          LayerHelper.msg('已取消注入');
+                      } else {
+                          LayerHelper.msg('未注入');
                       }
-                      messageAppend("<hig>未注入");
                   }
-
               }
-          })
-          },
+          });
+      },
+      _zmlInitZmlEdit: function () {
+          var self = WG;
+          WG._zmlVue = new Vue({
+              el: '#zmldialog',
+              data: {
+                  singnalzml: { name: '', zmlType: '0', zmlRun: '' },
+                  zmldata: zml
+              },
+              created() {
+                  this.zmldata = zml;
+              },
+              methods: {
+                  add: function () {
+                      var zmljson = {
+                          name: this.singnalzml.name,
+                          zmlRun: this.singnalzml.zmlRun,
+                          zmlShow: 0,
+                          zmlType: this.singnalzml.zmlType
+                      };
+                      var _flag = true;
+                      for (var item of this.zmldata) {
+                          if (item.name == zmljson.name) {
+                              zmljson.zmlShow = item.zmlShow;
+                              item = zmljson;
+                              _flag = false;
+                          }
+                      }
+                      if (_flag) this.zmldata.push(zmljson);
+                      GM_setValue(roleid + '_zml', this.zmldata);
+                      LayerHelper.msg('保存成功');
+                  },
+                  del: function () {
+                      this.zmldata.forEach(function (v, k) {
+                          if (v.name == this.singnalzml.name) {
+                              this.zmldata.baoremove(k);
+                              GM_setValue(roleid + '_zml', this.zmldata);
+                              LayerHelper.msg('删除成功');
+                          }
+                      }, this);
+                  },
+                  getShare: function () {
+                      var id = prompt('请输入分享码');
+                      SettingsStore.getShareJson(id, function (res) {
+                          var v = JSON.parse(res.json);
+                          if (v.zmlRun != undefined) {
+                              this.singnalzml = v;
+                          } else {
+                              LayerHelper.msg('不合法');
+                          }
+                      }.bind(this));
+                  },
+                  edit: function (v) {
+                      this.singnalzml = v;
+                  },
+                  showp: function (v) {
+                      zmlshowsetting = GM_getValue(roleid + '_zmlshowsetting', zmlshowsetting);
+                      var a = $('.room-commands');
+                      if (zmlshowsetting == 1) a = $('.zdy-commands');
+                      for (var item of a.children()) {
+                          if (item.textContent == v.name.replace(/<[a-zA-Z]+>/g, '')) {
+                              item.remove();
+                              v.zmlShow = 0;
+                              GM_setValue(roleid + '_zml', zml);
+                              LayerHelper.msg('删除快速使用' + v.name);
+                              return;
+                          }
+                      }
+                      a.append('<span class="act-item act-item-zdy">' + v.name + '</span>');
+                      v.zmlShow = 1;
+                      GM_setValue(roleid + '_zml', zml);
+                      LayerHelper.msg('设置快速使用' + v.name);
+                      $('.act-item-zdy').off('click');
+                      $('.act-item-zdy').on('click', function () {
+                          TaskHelper.usezml(0, this.textContent, '');
+                      });
+                  },
+                  share: function (v) {
+                      SettingsStore.shareJson(GameState.id, v);
+                  }
+              }
+          });
+          $('.zml-back-btn').off('click').on('click', function () {
+              self._zmlOpenView('main');
+          });
+      },
+      _zmlInitZtjkEdit: function () {
+          var self = WG;
+          ztjk_item = GM_getValue(roleid + '_ztjk', []);
+          $('.ztjk_sharedfind').off('click').on('click', function () {
+              var id = prompt('请输入分享码');
+              SettingsStore.getShareJson(id, function (res) {
+                  var v = JSON.parse(res.json);
+                  if (v.script !== undefined) {
+                      $('#ztjk_name').val(v.name);
+                      $('#ztjk_script').val(v.script);
+                  } else {
+                      LayerHelper.msg('不合法的分享码');
+                  }
+              });
+          });
+          $('.ztjk_editadd').off('click').on('click', function () {
+              var ztjk = {
+                  name: $('#ztjk_name').val(),
+                  script: $('#ztjk_script').val(),
+                  isactive: 1
+              };
+              if (!ztjk.name || !ztjk.script) {
+                  LayerHelper.msg('名称和脚本不能为空！');
+                  return;
+              }
+              var _flag = true;
+              ztjk_item.forEach(function (v, k) {
+                  if (v.name == ztjk.name) {
+                      ztjk_item[k] = ztjk;
+                      _flag = false;
+                  }
+              });
+              if (_flag) ztjk_item.push(ztjk);
+              GM_setValue(roleid + '_ztjk', ztjk_item);
+              self._zmlOpenView('ztjkEdit');
+              LayerHelper.msg('保存成功');
+              WG.ztjk_func();
+          });
+          $('.ztjk_editdel').off('click').on('click', function () {
+              var name = $('#ztjk_name').val();
+              for (var i = ztjk_item.length - 1; i >= 0; i--) {
+                  if (ztjk_item[i].name === name) {
+                      ztjk_item.splice(i, 1);
+                      GM_setValue(roleid + '_ztjk', ztjk_item);
+                      self._zmlOpenView('ztjkEdit');
+                      LayerHelper.msg('删除成功');
+                      WG.ztjk_func();
+                      return;
+                  }
+              }
+          });
+          $('#ztjk_show').empty();
+          $('#ztjk_set').empty();
+          ztjk_item.forEach(function (v, k) {
+              var btn = $("<span class='zdy-item'>编辑: " + v.name + "</span>").on('click', function () {
+                  $('#ztjk_name').val(v.name);
+                  $('#ztjk_script').val(v.script);
+              });
+              $('#ztjk_show').append(btn);
+              var tmptext = v.isactive ? '暂停' : '启用';
+              var setbtn = $("<span class='zdy-item'>" + tmptext + ': ' + v.name + "</span>").on('click', function () {
+                  ztjk_item[k].isactive = v.isactive ? 0 : 1;
+                  GM_setValue(roleid + '_ztjk', ztjk_item);
+                  WG.ztjk_func();
+                  self._zmlOpenView('ztjkEdit');
+              });
+              $('#ztjk_set').append(setbtn);
+              var btn3 = $("<span class='zdy-item'>分享: " + v.name + "</span>").on('click', function () {
+                  SettingsStore.shareJson(GameState.id, v);
+              });
+              $('#ztjk_show').append(btn3);
+          });
+          $('.zml-back-btn').off('click').on('click', function () {
+              self._zmlOpenView('main');
+          });
+      },
+      zmlztjk: function () {
+          if (WG._zmlLayerIndex) {
+              layer.close(WG._zmlLayerIndex);
+              return;
+          }
+          WG._zmlOpenView('main');
+      },
       zml_edit: function () {
           zml = GM_getValue(roleid + "_zml", zml);
           if (! typeof zml instanceof Array) {

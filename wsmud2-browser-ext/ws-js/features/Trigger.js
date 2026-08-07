@@ -1274,7 +1274,7 @@
             <span class="zdy-item" style="width:120px" v-for="t in templates" v-on:click="select(t)">{{ t.event }}</span>
             `;
             const leftText = "<span v-on:click='back()'>< 返回</span>";
-            UI._appendHtml("<wht>选择触发事件</wht>", content, null, leftText);
+            UI._showModal("<wht>选择触发事件</wht>", content, null, leftText);
             new Vue({
                 el: '#app',
                 data: {
@@ -1282,7 +1282,7 @@
                 },
                 methods: {
                     select: UI.createTrigger,
-                    back: UI.triggerHome
+                    back: function () { UI._closeModal(); UI.triggerHome(); }
                 }
             });
         },
@@ -1305,7 +1305,7 @@
                     </span>
                 </div>
                 <div style="float:right;width:calc(100% - 125px)">
-                    <textarea class = "settingbox hide" style = "height:10rem;display:inline-block;font-size:0.8em;width:100%;font-family:'JetBrains Mono',monospace;" v-model="source"></textarea>
+                    <textarea class = "settingbox hide" style = "height:30rem;display:inline-block;font-size:0.8em;width:100%;font-family:'JetBrains Mono',monospace;" v-model="source"></textarea>
                     <span class="raid-item shareTrigger" v-if="canShared" v-on:click="share()">分享此触发器</span>
                 </div>
             </div>
@@ -1319,7 +1319,7 @@
             if (trigger) {
                 leftText = "<span v-on:click='saveback'>< 保存&返回</span>"
             }
-            UI._appendHtml(title, content, rightText, leftText);
+            UI._showModal(title, content, rightText, leftText);
             let conditions = {};
             if (trigger != null) {
                 conditions = trigger.conditions;
@@ -1343,6 +1343,7 @@
                     save: function () {
                         const result = TriggerCenter.create(this.name, template.event, this.conditions, this.source);
                         if (result == true) {
+                            UI._closeModal();
                             UI.triggerHome();
                         } else {
                             alert(result);
@@ -1352,6 +1353,7 @@
                         const verify = confirm("确认删除此触发器吗？");
                         if (verify) {
                             TriggerCenter.remove(trigger.name);
+                            UI._closeModal();
                             UI.triggerHome();
                         }
                     },
@@ -1361,6 +1363,7 @@
                     saveback: function () {
                         const result = TriggerCenter.modify(trigger.name, this.name, this.conditions, this.source);
                         if (result == true) {
+                            UI._closeModal();
                             UI.triggerHome();
                         } else {
                             alert(result);
@@ -1389,6 +1392,36 @@
             </div>`;
             Message.clean();
             Message.append(html, 2);
+        },
+        _closeModal: function () {
+            var el = document.getElementById('trigger-modal-overlay');
+            if (el) el.remove();
+        },
+        _showModal: function (title, content, rightText, leftText) {
+            UI._closeModal();
+            // 移除可能残留的 #app 元素，避免 Vue 挂载到错误的位置
+            var staleApp = document.getElementById('app');
+            if (staleApp) staleApp.remove();
+            var realLeftText = leftText ?? "";
+            var realRightText = rightText ?? "";
+            var overlay = document.createElement('div');
+            overlay.id = 'trigger-modal-overlay';
+            overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);z-index:9999;display:flex;align-items:center;justify-content:center;';
+            var modal = document.createElement('div');
+            modal.style.cssText = 'background:#1a1a2e;border:1px solid #555;border-radius:12px;padding:24px;width:80vw;height:75vh;max-width:95%;max-height:85vh;overflow:auto;position:relative;box-shadow:0 0 30px rgba(0,0,0,0.5);';
+            var html = `
+            <div class="item-commands" style="text-align:center" id="app">
+                <div style="margin-top:0.5em">
+                    <div style="width:12em;float:left;text-align:left;padding:0px 0px 0px 2em;height:1.23em" id="wsmud_raid_left">${realLeftText}</div>
+                    <div style="width:calc(100% - 16em);float:left;height:1.23em">${title}</div>
+                    <div style="width:6em;float:right;text-align:right;padding:0px 2em 0px 0px;height:1.23em" id="wsmud_raid_right">${realRightText}</div>
+                </div>
+                <br><br>
+                ${content}
+            </div>`;
+            modal.insertAdjacentHTML('beforeend', html);
+            overlay.appendChild(modal);
+            document.body.appendChild(overlay);
         },
     };
 

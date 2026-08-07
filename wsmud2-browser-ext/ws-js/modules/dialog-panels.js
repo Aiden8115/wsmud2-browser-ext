@@ -3271,14 +3271,14 @@ Dialog.party = {
             return this.show_list(_t898);
         if (!_t898.name)
             return this.empty("你还没有加入帮派");
-        Dialog.title("帮派【" + _t900.name + '】\x20<nor>' + _t898.roles.length + '/' + this.level_roles[_t898.level] + "</nor>");
+        Dialog.title("帮派【" + _t898.name + '】\x20<nor>' + _t898.roles.length + '/' + this.level_roles[_t898.level] + "</nor>");
         var _a81 = [];
-        _t900.notice && (_a81.push("<div class='party-notice'>"),
-        _a81.push(_t900.notice),
+        _t898.notice && (_a81.push("<div class='party-notice'>"),
+        _a81.push(_t898.notice),
         _a81.push("</div>"));
         _a81.push("<div class='party-roles'>");
-        for (var _n126 = 0; _n126 < _t900.roles.length; _n126++) {
-            var _t901 = _t900.roles[_n126];
+        for (var _n126 = 0; _n126 < _t898.roles.length; _n126++) {
+            var _t901 = _t898.roles[_n126];
             _t901.id == Process.player && (this.level = _t901.level);
             _a81.push("<div class='party-role' roleid='" + _t901.id + '\x27>');
             _a81.push("<span class='role-level'>");
@@ -3881,9 +3881,9 @@ Dialog.extend = {
             'value': 'item'
         }]
     },{
-        'name': '数据触发器',
-        'value': 'trigger',
-        'for': [{
+        name: '数据触发器',
+        value: 'trigger',
+        for: [{
             'name': '数据',
             'value': 'data'
         }]

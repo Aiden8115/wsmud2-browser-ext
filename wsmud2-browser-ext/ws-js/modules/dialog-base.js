@@ -216,5 +216,5 @@ const Dialog = {
         'close': function() {
             this.hide();
         }
-    }
-};
+    },
+    };
