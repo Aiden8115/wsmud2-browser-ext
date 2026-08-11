@@ -4225,6 +4225,7 @@ $to 住房-练功房;dazuo
                     <span class="raid-item customFlow" id="workflows-button"><hig>流程</hig></span>
                     <span class="raid-item moreRaid"><hic>副本</hic></span>
                     <span class="raid-item commandLine"><hir>命令</hir></span>
+                    <span class="raid-item zmlztjk"><hir>自命令</hir></span>                    
                 </div>
             </div>`
             $(".WG_log").before(raidToolbar);
@@ -4234,6 +4235,7 @@ $to 住房-练功房;dazuo
             $(".shortcut").on('click', UI.shortcut);
             $(".moreRaid").on('click', UI.dungeons);
             $(".commandLine").on('click', UI.commandLine);
+            $(".zmlztjk").on('click', WG.zmlztjk);
             $(".hideRaidToolbar").on('click', UI.hideToolbar);
         },
         hideToolbar: function () {
@@ -4337,7 +4339,11 @@ $to 住房-练功房;dazuo
                 DungeonsShortcuts.extension_yjyt();
             });
             $(".extension-setting").on("click", function () {
-                DungeonsShortcuts.extension_setting();
+                if (unsafeWindow.showExtSettings) {
+                    unsafeWindow.showExtSettings();
+                } else {
+                    DungeonsShortcuts.extension_setting();
+                }
             });
         },
         shortcut: function () {

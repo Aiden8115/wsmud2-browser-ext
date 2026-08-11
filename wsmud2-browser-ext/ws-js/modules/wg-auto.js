@@ -790,7 +790,7 @@ Object.assign(WG, {
 
               shieldswitch = WG.switchReversal($(this));
               GM_setValue("_shieldswitch", shieldswitch);
-              if (shieldswitch == "开") {
+              if (shieldswitch == "开" || shieldswitch === true || shieldswitch === 'true') {
                   messageAppend('已注入屏蔽系统', 1);
               }
           });
@@ -798,7 +798,7 @@ Object.assign(WG, {
 
               zdyskills = WG.switchReversal($(this));
               GM_setValue(roleid + "_zdyskills", zdyskills);
-              if (zdyskills == "开") {
+              if (zdyskills == "开" || zdyskills === true || zdyskills === 'true') {
                   messageAppend('已开启自定义技能顺序，填写顺序后，请刷新游戏生效', 1);
               }
           });
@@ -818,7 +818,7 @@ Object.assign(WG, {
 
               dpssakada = WG.switchReversal($(this));
               GM_setValue(roleid + "_dpssakada", dpssakada);
-              if (dpssakada == "开") {
+              if (dpssakada == "开" || dpssakada === true || dpssakada === 'true') {
                   messageAppend('已开启战斗统计', 1);
               }
           });
@@ -826,7 +826,7 @@ Object.assign(WG, {
 
               funnycalc = WG.switchReversal($(this));
               GM_setValue(roleid + "_funnycalc", funnycalc);
-              if (funnycalc == "开") {
+              if (funnycalc == "开" || funnycalc === true || funnycalc === 'true') {
                   messageAppend('已开启FUNNY计算', 1);
               }
           });
@@ -870,9 +870,9 @@ Object.assign(WG, {
           $('.backup_btn').on('click', WG.make_config);
           $('.load_btn').on('click', WG.load_config);
           $('.clear_skillJson').on('click', () => {
-              zdyskilllist == "";
+              zdyskilllist = "";
               messageAppend("已关闭自定义，请刷新重新获取技能数据!");
-              zdyskills = "关";
+              zdyskills = false;
               GM_setValue(roleid + "_zdyskilllist", "");
               GM_setValue(roleid + "_zdyskills", zdyskills);
           });

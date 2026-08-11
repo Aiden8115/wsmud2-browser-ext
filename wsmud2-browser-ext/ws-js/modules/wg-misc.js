@@ -189,7 +189,7 @@ Object.assign(WG, {
               }
           }
           if (data.type == 'msg') {
-              if (shieldswitch == '开') {
+              if (shieldswitch == '开' || shieldswitch === true || shieldswitch === 'true') {
                   if (shield != undefined &&
                       (shield.indexOf(data.name) >= 0 ||
                        shield.indexOf(data.uid) >= 0))
@@ -204,20 +204,20 @@ Object.assign(WG, {
 
               // 个人需求：远程操控重连
               if (data.ch=="tm" && data.content=="关闭重连"){
-                  auto_relogin="关";
+                  auto_relogin=false;
                   GM_setValue(roleid + "_auto_relogin", auto_relogin);
                   let check_relogin = GM_getValue(roleid + "_auto_relogin", auto_relogin)
                   WG.SendCmd(`tm 当前重连为${check_relogin}`)
               }
               if (data.content=="开启重连"){
-                  auto_relogin="开";
+                  auto_relogin=true;
                   GM_setValue(roleid + "_auto_relogin", auto_relogin);
                   let check_relogin = GM_getValue(roleid + "_auto_relogin", auto_relogin)
                   WG.SendCmd(`tm 当前重连为${check_relogin}`)
               }
           }
           if (data.type == 'text') {
-              if (shieldswitch == '开') {
+              if (shieldswitch == '开' || shieldswitch === true || shieldswitch === 'true') {
                   var skey = shieldkey.split(",");
                   for (let keyword of skey) {
                       if (keyword != "" && data.msg.indexOf(keyword) >= 0) {
@@ -321,7 +321,7 @@ Object.assign(WG, {
               return;
           }
           if (data.type == "perform") {
-              if (zdyskills == "开") {
+              if (zdyskills == "开" || zdyskills === true || zdyskills === 'true') {
                   zdyskilllist = GM_getValue(roleid + "_zdyskilllist", zdyskilllist);
                   data.skills = JSON.parse(zdyskilllist);
                   let p = deepCopy(msg);

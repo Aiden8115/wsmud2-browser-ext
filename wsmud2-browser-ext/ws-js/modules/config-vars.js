@@ -256,14 +256,14 @@ var auto_relogin = null;
 //dps统计信息
 var normalHitCount = 0;       // 普通攻击次数
 var normalDamageTotal = 0;    // 普通伤害总和
-var dpssakada = '开'          // DPS统计开关
+var dpssakada = true          // DPS统计开关
 var critDamageTotal = 0;      // 暴击伤害总和
 var critHitCount = 0;         // 暴击次数
 var dpsLocked = 0;            // DPS统计锁定标志
 var battleStartTime = 0;      // 战斗开始时间
 var lastCritDamage = 0, lastNormalDamage = 0;  // 上次暴击/普通伤害
 //funny计算
-var funnycalc = '关';
+var funnycalc = false;
 var expGained = 0;            // 获得经验
 var potGained = 0;            // 获得潜能
 //彩虹名字
@@ -274,17 +274,17 @@ var loginhml = '';
 //挂机选项
 var autowork = '0';
 //显示昏迷信息
-var busy_info = "开";
+var busy_info = true;
 //显示CD信息
-var skillCD = "关";
-var buffCD = "开";
+var skillCD = false;
+var buffCD = true;
 // 获得物品展示设置
-var getitemShow = "开";
+var getitemShow = true;
 var itemTotalCount = {};
 var zmlshowsetting = 0;
 
 // 自动喜宴
-var automarry = '开';
+var automarry = true;
 // 自动boss
 var autoBoss = null;
 var BossName = null;
@@ -296,17 +296,17 @@ var blackpfm = [];
 //自动施法黑名单
 var unauto_pfm = '';
 //自动施法开关
-var auto_pfmswitch = "关";
+var auto_pfmswitch = false;
 // 自动施法模式 开：智能施法，关：顺序施法
-var auto_pfm_mode = "开";
+var auto_pfm_mode = true;
 var can_auto = true;
 
 //自动购买
 var autoBuyList = "";
 
 //一键分解
-var onekey_fenjie = "关";
-var follower_fenjie = "关";
+var onekey_fenjie = false;
+var follower_fenjie = false;
 var fj_sc = "";
 var fenjieList = "";
 
@@ -319,14 +319,14 @@ var color_select = "normal";
 var backimageurl = '';
 
 //屏蔽开关
-var shieldswitch = "关"
+var shieldswitch = false
 //屏蔽列表
 var shield = '';
 //屏蔽关键字列表
 var shieldkey = '';
 
 //通知推送开关、方式、Token、Url
-var pushSwitch = "关";
+var pushSwitch = false;
 var pushType = "0";
 var pushToken = "";
 // var pushUrl = "https://";
@@ -339,11 +339,11 @@ var zml = [];
 //[{"name":"","type":"status","action":"remove","keyword":"busy","ishave":"0","send":"","isactive":"1","maxcount":10,"pname":"宋远桥","istip":"1"}]
 var ztjk_item = [];
 //  自定义技能开关
-var zdyskills = "关";
+var zdyskills = false;
 var zdyskilllist = "";
 
 //仓库位置
-var saveAddr = "关";
+var saveAddr = false;
 //定时任务
 //名称   类型 一次 1 每天 0 发送命令  触发时间 24小时制
 //[{"name":"","type":"0","send":"","h":"","s":"","m":""}]

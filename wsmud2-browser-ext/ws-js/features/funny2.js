@@ -176,59 +176,6 @@
     }
   });
 
-  // 活动事件对话框：筛选感兴趣的活动并渲染到右侧栏
-  window.WG.add_hook("dialog", function (data) {
-    if (data.dialog != "events" || data.update || data.finish) return;
-    const toshow = ["挖矿指南", "BOSS", "门派战争", "婚礼"];
-    const events = [];
-    console.log(data);
-    data.items.forEach(event => {
-      if (toshow.some(item => event[1].includes(item))) {
-        const date = new Date(event[4]);
-        const hours = String(date.getHours()).padStart(2, '0');
-        const minutes = String(date.getMinutes()).padStart(2, '0');
-        const seconds = String(date.getSeconds()).padStart(2, '0');
-        const dur = event[4] == 0 ? "" : `持续到${hours}:${minutes}:${seconds}`;
-        const cmd = "events " + event[0] + " ok";
-        events.push({ "tit": event[1], "des": event[2], "dur": dur, "cmd": cmd });
-      }
-    });
-
-    const eventElements = events.map(event => {
-        let eventDesc = event.des;
-        if (event.tit == "挖矿指南") {
-            const reg = /获得经验\+(\d+)/;
-            const match = eventDesc.match(reg);
-            eventDesc = "挖矿获得经验+" + (match[1] ?? "???");
-        }
-
-        console.log(eventDesc);
-        return $(`<div class="events-event"></div>`).append(
-            $(`<div class="events-box-left"></div>`).append(
-                $(`<div class="events-header"></div>`).append(
-                    $(`<div class="tit">${event.tit}</div>`),
-                    $(`<div class="dur">${event.dur}</div>`)
-                ),
-                $(`<div class="des">${eventDesc}</div>`)
-            ),
-            $(`<div class="events-box-right"></div>`).append(
-                $(`<div class="cmd">前往</div>`).on('click', function () {
-                    SendCommand(event.cmd);
-                })
-            )
-        );
-    });
-
-    if ($(".right-events").length === 0) {
-      $(".right-events").append(
-        $(`<div class="events-box"></div>`)
-      );
-    }
-
-    $(".events-box").empty().append(eventElements);
-  });
-
-
   let pack = new Proxy({ items: [], moneyStr: "", }, {
     set: function (pack, key, value) {
       if (key === "moneyStr") $(".role_money").html(value);
@@ -560,15 +507,15 @@
         const moveTasks = [
           {
             source: '#raidToolbar',
-            target: 'body > div.left > div.left-console',
+            target: 'body > div.left > div.left-hotkeys',
           },
           {
             source: '.WG_log',
-            target: 'body > div.left > div.left-console',
+            target: 'body > div.left > div.left-hotkeys',
           },
           {
             source: '.WG_log_log',
-            target: 'body > div.left > div.left-console',
+            target: 'body > div.right > div.left-console',
           },
           {
             source: '.channel',
@@ -611,31 +558,73 @@
     {
       GM_addStyle(`
       .right{ order: 1; display: flex; flex-direction: column; flex-wrap: nowrap; }
-      .right-channel { width: 100%; flex: 0 0 60%; overflow: auto; margin-top: 10px; }
-      .right-events { width: 100%; height: auto; flex: 0 0 40%; padding-left: 5px; overflow-y: auto; margin-bottom: 10px; }
+      .right-channel { width: 100%; flex: 0 0 50%; overflow: auto; margin-top: 10px; display: flex; flex-direction: column; position: relative; }
       .channel { max-height: 90% !important; flex: 1; overflow: auto;}
+      .right-channel-tabs { flex-shrink: 0; display: flex; gap: 2px; padding: 4px 6px; background: rgba(0,0,0,0.3); border-top: 1px solid rgba(255,255,255,0.15); }
+      .right-channel-tabs > span { cursor: pointer; padding: 2px 8px; border-radius: 3px; font-size: 12px; color: #aaa; }
+      .right-channel-tabs > span:hover { background: rgba(255,255,255,0.1); color: #fff; }
+      .right-channel-tabs > span.selected { background: rgba(190,190,190,0.3); color: #fff; }
+      .left-console { width: 100%; flex: 1; overflow: auto; margin: 8px; display: flex; flex-direction: column; }
+      .WG_log_log { width: 100%;height: 100%; flex: 1; overflow: hidden; max-height: none !important; display: flex; flex-direction: column; }
+      .WG_log_log_title { color: #ffffff; font-size: 14px; font-weight: bold; padding: 4px 10px; border-bottom: 1px solid rgba(255,255,255,0.25); flex-shrink: 0; }
+      .WG_log_log > pre { flex: 1; overflow-y: auto; font-family: 'JetBrains Mono', monospace; font-size: 12px; }
       `
       );
       $(".right").append(
         $(`<div class="right-channel"></div>`),
-        $(`<div class="right-events"></div>`),
+        $(`<div class="left-console"></div>`),
       );
+
+      // 创建右侧频道标签栏（全部/世界/队伍/门派/全区/帮派/系统）
+      var _channelTabData = [['全部', ''], ['世界', 'chat'], ['队伍', 'tm'], ['门派', 'fam'], ['全区', 'es'], ['帮派', 'pty'], ['系统', 'sys']];
+      var _channelTabBar = $('<div class="right-channel-tabs" style="display:none;"></div>');
+      _channelTabData.forEach(function(item, idx) {
+        var tab = $('<span for="' + item[1] + '">' + item[0] + '</span>');
+        if (idx === 0) tab.addClass('selected');
+        tab.on('click', function() {
+          _channelTabBar.find('span').removeClass('selected');
+          $(this).addClass('selected');
+          var channel = $(this).attr('for') || '';
+          if (typeof Dialog !== 'undefined' && Dialog.channel && Dialog.channel.footerChanged) {
+            Dialog.channel.footerChanged(channel);
+          }
+        });
+        _channelTabBar.append(tab);
+      });
+
+      // 持续监控：确保 .channel 在 .right-channel 内，移除双击弹窗事件，登录后显示标签栏
+      setInterval(function() {
+        var $channel = $('.channel');
+        var $rightChannel = $('.right-channel');
+        if ($channel.length > 0 && $rightChannel.length > 0) {
+          // 如果 channel 不在 right-channel 内，移回去
+          if (!$channel.parent().hasClass('right-channel')) {
+            $channel.appendTo($rightChannel);
+          }
+          // 持续移除 click 事件（防止 Process.init() 重新绑定）
+          $channel.off('click');
+          // 显示标签栏（仅登录后显示）
+          if (typeof GameState !== 'undefined' && GameState.id) {
+            if (_channelTabBar.parent().length === 0) {
+              $rightChannel.append(_channelTabBar);
+            }
+            _channelTabBar.show();
+          } else {
+            _channelTabBar.hide();
+          }
+        }
+      }, 200);
     }
     /********************LEFT********************/
     GM_addStyle(`
       .left { height: 100%; order: -1; display: flex; flex-direction: column; flex-wrap: nowrap; }
       .left-content { width: 100%; height: auto; flex: 0 0 auto;}
-      .left-hotkeys { width: 100%; height: auto; flex: 0 0 120px; padding-left: 5px; }
-      .left-console { width: 100%; flex: 1 1 auto; overflow: auto; margin: 8px; display: flex; flex-direction: column; }
+      .left-hotkeys { width: 100%; flex: 1; padding-left: 5px; overflow-y: auto; }
       .WG_log { width: 100%;height: 100%; flex: 1; overflow: auto; max-height: none !important; }
-      .WG_log_log { width: 100%;height: 100%; flex: 1; overflow: hidden; max-height: none !important; display: flex; flex-direction: column; }
-      .WG_log_log_title { color: #ffffff; font-size: 14px; font-weight: bold; padding: 4px 10px; border-bottom: 1px solid rgba(255,255,255,0.25); flex-shrink: 0; }
-      .WG_log_log > pre { flex: 1; overflow-y: auto; font-family: 'JetBrains Mono', monospace; font-size: 12px; }
       `);
     $(".left").append(
       $(`<div class="left-content"></div>`),
       $(`<div class="left-hotkeys"></div>`),
-      $(`<div class="left-console"></div>`),
     );
     {
       $(".left-hotkeys").append(
@@ -754,98 +743,6 @@
         ),
       );
     };
-    /********************LEFT-EVENTS********************/
-    {
-      GM_addStyle(`
-        .right-events {
-            font-size: 14px;
-            overflow: auto;
-            display: flex;
-            flex-direction: column;
-            flex-wrap: nowrap;
-        }
-        .events-box {
-            flex: 0 1 auto;
-            overflow: auto;
-            display: flex;
-            flex-direction: column;
-        }
-        .events-event {
-            border-radius: 6px;
-            background-color: #111111;
-            border-left-width: 4px;
-            border-left-style: solid;
-            margin-bottom: 0.5em;
-            padding-left: 0.5em;
-            display: flex;
-            flex-direction: row;
-        }
-        .events-box-left {
-            margin-top: 0.5em;
-            margin-bottom: 0.5em;
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-        }
-        .events-box-right {
-            flex: 0 0 auto;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-        .events-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        .events-event .tit {
-            margin: 0px;
-            color: var(--border-color);
-            font-weight: bold;
-        }
-        .events-event .des {
-            white-space: pre-wrap;
-            margin: 0;
-            padding-top: 0.5em;
-        }
-        .events-event .dur {
-            margin: 0px;
-            color: gray;
-        }
-        .events-event .cmd {
-            font-size: 16px;
-            width: 2.0em;
-            border-left: 1px solid var(--border-color);
-            text-align: center;
-            font-weight: bold;
-            background-color: transparent;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            color: var(--border-color);
-            flex-direction: column;
-            writing-mode: vertical-rl;
-        }
-       `);
-      $(".right-events").append(
-        $(`<div class="events-box"></div>`).append(
-          $(`<div class="events-event"></div>`).append(
-            $(`<div class="events-box-left"></div>`).append(
-              $(`<div class="events-header"></div>`).append(
-                $(`<div class="tit">挖矿指南</div>`),
-                $(`<div class="dur">持续到00:00</div>`)
-              ),
-              $(`<div class="des">funny学会了新的挖矿技巧，所有人的挖矿效率都提高了，获得经验+50。</div>`)
-            ),
-            $(`<div class="events-box-right"></div>`).append(
-              $(`<div class="cmd">前往</div>`)
-            )
-          )
-        )
-      );
-    };
-    
     function checkEq() {
       SendCommand(["pack", "cha"]);
       const eqgroup = localStorage.getItem(id + "_eqgroup");
@@ -1048,6 +945,311 @@
     AddContent($(`<span></span>`).append(`<hiy>如无声音，请检查音量\n</hiy>`));
   }
 
+  /********************扩展设置弹窗********************/
+
+  // 获取/初始化自动售卖/使用清单
+  function getAutoSellList() {
+    const val = localStorage.getItem(id + '_autosell');
+    return val ? val.split('\n').filter(s => s.trim()) : [];
+  }
+  function getAutoUseList() {
+    const val = localStorage.getItem(id + '_autouse');
+    return val ? val.split('\n').filter(s => s.trim()) : [];
+  }
+  function saveAutoSellList(list) {
+    localStorage.setItem(id + '_autosell', list.join('\n'));
+  }
+  function saveAutoUseList(list) {
+    localStorage.setItem(id + '_autouse', list.join('\n'));
+  }
+
+  // 独立设置弹窗（整合所有游戏设置 + 自动售卖/使用）
+  let extSettingsOverlay = null;
+  function showExtSettings() {
+    if (extSettingsOverlay) return;
+
+    const rid = unsafeWindow.roleid || id || '';
+    const sellText = (localStorage.getItem(rid + '_autosell') || '').replace(/\\n/g, '\n');
+    const useText = (localStorage.getItem(rid + '_autouse') || '').replace(/\\n/g, '\n');
+
+    const overlay = $(`<div class="ext-settings-overlay"></div>`).css({
+      position: 'fixed', top: 0, left: 0, width: '100%', height: '100%',
+      background: 'rgba(0,0,0,0.6)', zIndex: 99999,
+      display: 'flex', alignItems: 'center', justifyContent: 'center'
+    });
+    const dialog = $(`<div class="ext-settings-dialog"></div>`).css({
+      background: '#1a1a2e', border: '1px solid #444', borderRadius: '8px',
+      width: '80vw', minHeight: '75vh', maxHeight: '85vh',
+      display: 'flex', flexDirection: 'column', color: '#ccc', fontSize: '14px',
+      boxShadow: '0 4px 20px rgba(0,0,0,0.5)'
+    });
+
+    // 标题栏
+    const header = $(`<div class="ext-settings-header"></div>`).css({
+      display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+      padding: '12px 16px', borderBottom: '1px solid #444', fontSize: '16px', fontWeight: 'bold'
+    }).append(
+      $('<span>游戏设置</span>'),
+      $('<span class="ext-settings-close" style="cursor:pointer;font-size:20px;line-height:1;">&times;</span>')
+    );
+    dialog.append(header);
+
+    // 内容区
+    const body = $(`<div class="ext-settings-body"></div>`).css({
+      padding: '16px', overflowY: 'auto', flex: 1
+    });
+
+    // ===== 1. 所有游戏设置（来自 syssetting） =====
+    body.append(UI.syssetting());
+
+    // ===== 2. 自动售卖/使用分隔线 =====
+    body.append($('<hr style="border:1px solid #444;margin:16px 0;">'));
+    body.append($('<h3 style="margin:0 0 12px;color:#eee;font-size:15px;">扩展功能</h3>'));
+
+    // 自动售卖
+    body.append(
+      $('<div style="margin-bottom:12px;"><label style="display:block;margin-bottom:4px;color:#eee;">自动售卖清单（每行一个物品名，匹配 @zdsell 使用）</label></div>'),
+      $(`<textarea class="ext-sell-textarea" style="width:100%;height:80px;resize:vertical;background:#0d0d1a;border:1px solid #444;border-radius:4px;color:#ccc;padding:6px;font-size:13px;font-family:inherit;"></textarea>`).val(sellText)
+    );
+
+    // 自动使用
+    body.append(
+      $('<div style="margin-bottom:12px;margin-top:12px;"><label style="display:block;margin-bottom:4px;color:#eee;">自动使用清单（每行一个物品名，匹配 @zduse 使用）</label></div>'),
+      $(`<textarea class="ext-use-textarea" style="width:100%;height:80px;resize:vertical;background:#0d0d1a;border:1px solid #444;border-radius:4px;color:#ccc;padding:6px;font-size:13px;font-family:inherit;"></textarea>`).val(useText)
+    );
+
+    // 保存按钮
+    body.append(
+      $('<div style="text-align:right;margin-top:12px;display:flex;gap:8px;justify-content:flex-end;"></div>').append(
+        $('<span class="ext-settings-save" style="display:inline-block;padding:6px 20px;background:#4a6fa5;color:#fff;border-radius:4px;cursor:pointer;">保存设置</span>')
+      )
+    );
+    dialog.append(body);
+    overlay.append(dialog);
+    $('body').append(overlay);
+
+    extSettingsOverlay = overlay;
+
+    // ===== 初始化设置值 + 绑定事件 =====
+    initPopupSettings(body);
+
+    // 关闭函数
+    function closeExtSettings() {
+      const sellVal = dialog.find('.ext-sell-textarea').val();
+      const useVal = dialog.find('.ext-use-textarea').val();
+      localStorage.setItem(rid + '_autosell', sellVal);
+      localStorage.setItem(rid + '_autouse', useVal);
+      overlay.remove();
+      extSettingsOverlay = null;
+      AddContent(`<hiy>扩展设置已保存\n</hiy>`);
+    }
+
+    // × 关闭
+    header.find('.ext-settings-close').on('click', closeExtSettings);
+    // 遮罩关闭
+    overlay.on('click', function (e) {
+      if (e.target === overlay[0]) closeExtSettings();
+    });
+    // ESC 关闭
+    const escHandler = function (e) {
+      if (e.key === 'Escape') {
+        closeExtSettings();
+        $(document).off('keydown', escHandler);
+      }
+    };
+    $(document).on('keydown', escHandler);
+
+    // 保存按钮（仅保存自动售卖/使用，游戏设置自动保存）
+    dialog.find('.ext-settings-save').on('click', function () {
+      closeExtSettings();
+    });
+  }
+
+  // 初始化弹窗内所有游戏设置的值和事件
+  function initPopupSettings(container) {
+    const rid = unsafeWindow.roleid || id || '';
+
+    // 通用读取/写入（优先 GM_*，兼容 localStorage）
+    function getVal(key) {
+      try { var v = unsafeWindow.GM_getValue(key); if (v !== undefined && v !== null) return v; } catch(e) {}
+      return localStorage.getItem(key);
+    }
+    function setVal(key, val) {
+      try { unsafeWindow.GM_setValue(key, val); } catch(e) {}
+      localStorage.setItem(key, val);
+    }
+
+    // ---- 开关（.switch2）初始化 ----
+    container.find('.setting-item2[for]').each(function () {
+      var $item = $(this);
+      var key = $item.attr('for');
+      var val = getVal(rid + '_' + key);
+      if (val === true || val === 'true' || val === '开') {
+        $item.find('.switch2').addClass('on');
+        $item.find('.switch-text').html('开');
+      } else {
+        $item.find('.switch2').removeClass('on');
+        $item.find('.switch-text').html('关');
+      }
+    });
+
+    // 开关点击事件
+    container.find('.switch2').off('click').on('click', function () {
+      var $this = $(this);
+      var $item = $this.closest('.setting-item2[for]');
+      var key = $item.attr('for');
+      if ($this.is('.on')) {
+        $this.removeClass('on');
+        $this.find('.switch-text').html('关');
+        setVal(rid + '_' + key, false);
+      } else {
+        $this.addClass('on');
+        $this.find('.switch-text').html('开');
+        setVal(rid + '_' + key, true);
+      }
+      // 立即应用彩虹名字效果
+      if (key === 'rainbow_name' && typeof unsafeWindow.rainbowplayer === 'function') {
+        unsafeWindow.rainbowplayer();
+      }
+    });
+
+    // ---- 家族选择 ----
+    container.find('#family').val(getVal(rid + '_family') || '武当').off('change').on('change', function () {
+      setVal(rid + '_family', $(this).val());
+    });
+
+    // ---- 挂机选项 ----
+    container.find('#autowork').val(getVal(rid + '_autowork') || '').off('change').on('change', function () {
+      setVal(rid + '_autowork', $(this).val());
+    });
+
+    // ---- 自命令显示位置 ----
+    container.find('#zmlshowsetting').val(getVal(rid + '_zmlshowsetting') || '0').off('change').on('change', function () {
+      setVal(rid + '_zmlshowsetting', $(this).val());
+    });
+
+    // ---- 界面配色 ----
+    container.find('#color_select').val(getVal('color_select') || 'normal').off('change').on('change', function () {
+      setVal('color_select', $(this).val());
+    });
+
+    // ---- 推送方式 ----
+    container.find('#pushType').val(getVal('_pushType') || '0').off('change').on('change', function () {
+      setVal('_pushType', $(this).val());
+    });
+
+    // ---- 文本输入（change/focusout 自动保存） ----
+    var inputIds = [
+      { id: 'loginhml', prefix: true },
+      { id: 'BossName', prefix: true },
+      { id: 'auto_command', prefix: true },
+      { id: 'die_str', prefix: true },
+      { id: 'custom_dock', prefix: true },
+      { id: 'shield', prefix: false },
+      { id: 'shieldkey', prefix: false },
+      { id: 'pushToken', prefix: false },
+      { id: 'backimageurl', prefix: true },
+      { id: 'autoBuy', prefix: true },
+      { id: 'unauto_pfm', prefix: true },
+      { id: 'fj_sc', prefix: true },
+      { id: 'fjList', prefix: true },
+      { id: 'zdyskilllist', prefix: true },
+    ];
+    inputIds.forEach(function (item) {
+      var $el = container.find('#' + item.id);
+      if (!$el.length) return;
+      var storageKey = item.prefix ? (rid + '_' + item.id) : ('_' + item.id);
+      // 特殊处理部分 key 前缀
+      if (item.id === 'shield' || item.id === 'shieldkey') storageKey = '_' + item.id;
+      if (item.id === 'pushToken') storageKey = '_pushToken';
+      if (item.id === 'pushType') storageKey = '_pushType';
+      if (item.id === 'color_select') storageKey = 'color_select';
+      // 读取初始值
+      var saved = getVal(storageKey);
+      if (saved !== null && saved !== undefined) $el.val(saved);
+      // 绑定保存
+      $el.off('change focusout').on('change focusout', function () {
+        setVal(storageKey, $(this).val());
+      });
+    });
+
+    // ---- 自定义按钮初始化 ----
+    var zdyBtnList = (function () {
+      try { var v = unsafeWindow.GM_getValue(rid + '_zdy_btnlist'); if (v) return v; } catch(e) {}
+      try { var v = JSON.parse(localStorage.getItem(rid + '_zdy_btnlist')); if (v) return v; } catch(e) {}
+      return [{name:'无',send:''},{name:'无',send:''},{name:'无',send:''},{name:'无',send:''},{name:'无',send:''},{name:'无',send:''}];
+    })();
+    var keyitem = ['Q','W','E','R','T','Y'];
+    keyitem.forEach(function (k, i) {
+      container.find('#name' + k).val(zdyBtnList[i] && zdyBtnList[i].name || '无');
+      container.find('#send' + k).val(zdyBtnList[i] && zdyBtnList[i].send || '');
+    });
+    container.find('.savebtn').off('click').on('click', function () {
+      var tmp = [];
+      keyitem.forEach(function (k) {
+        var pname = container.find('#name' + k).val();
+        var psend = container.find('#send' + k).val();
+        tmp.push({ name: pname || '无', send: psend || '' });
+      });
+      setVal(rid + '_zdy_btnlist', JSON.stringify(tmp));
+      AddContent('<hiy>自定义按钮已保存\n</hiy>');
+    });
+
+    // ---- 清空技能 json ----
+    container.find('.clear_skillJson').off('click').on('click', function () {
+      setVal(rid + '_zdyskilllist', '');
+      setVal(rid + '_zdyskills', false);
+      container.find('#zdyskillsswitch').removeClass('on').find('.switch-text').html('关');
+      container.find('#zdyskilllist').val('');
+      AddContent('<hiy>已清空自定义技能\n</hiy>');
+    });
+  }
+
+  /********************@zdsell / @zduse 自动售卖/使用********************/
+
+  // 遍历背包执行操作
+  function autoProcessPack(mode) {
+    const list = mode === 'sell' ? getAutoSellList() : getAutoUseList();
+    if (!list.length) {
+      AddContent(`<hir>${mode === 'sell' ? '自动售卖' : '自动使用'}清单为空，请先在扩展设置中填写\n</hir>`);
+      return;
+    }
+    const items = unsafeWindow.Dialog && unsafeWindow.Dialog.pack && unsafeWindow.Dialog.pack.items;
+    if (!items || !items.length) {
+      AddContent(`<hir>背包数据为空，请先打开背包\n</hir>`);
+      return;
+    }
+    const cmd = mode === 'sell' ? 'sell' : 'use';
+    let count = 0;
+    items.forEach(function (item) {
+      const match = list.some(function (name) {
+        return item.name.indexOf(name) !== -1 || name.indexOf(item.name) !== -1;
+      });
+      if (match && item.count > 0) {
+        SendCommand(cmd + ' ' + item.id);
+        count++;
+      }
+    });
+    AddContent(`<hiy>${mode === 'sell' ? '自动售卖' : '自动使用'}完成，共处理 ${count} 项\n</hiy>`);
+  }
+
+  // 劫持 SendChatMessage 拦截 @zdsell / @zduse
+  const _origSendChatMessage = unsafeWindow.SendChatMessage;
+  unsafeWindow.SendChatMessage = function () {
+    const msg = $(".sender-box").val();
+    if (msg === '@zdsell') {
+      $(".sender-box").val('').focus();
+      autoProcessPack('sell');
+      return;
+    }
+    if (msg === '@zduse') {
+      $(".sender-box").val('').focus();
+      autoProcessPack('use');
+      return;
+    }
+    return _origSendChatMessage.apply(this, arguments);
+  };
+
   /********************暴露********************/
   unsafeWindow.funny = {
     role: role,
@@ -1057,5 +1259,7 @@
     exits: exits,
 
     SendCommand: SendCommand,
+    showExtSettings: showExtSettings,
   };
+  unsafeWindow.showExtSettings = showExtSettings;
 })();

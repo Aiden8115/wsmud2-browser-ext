@@ -6,8 +6,18 @@
 var chatContainer = null;
 
 function rainbowplayer() {
+    // 等待 roleid 就绪
+    if (!roleid) {
+        setTimeout(rainbowplayer, 1000);
+        return;
+    }
+    // 等待 GameState 就绪
+    if (typeof GameState === 'undefined' || !GameState.id) {
+        setTimeout(rainbowplayer, 1000);
+        return;
+    }
     rainbow_name = GM_getValue(roleid + "_rainbow_name", rainbow_name);
-    if (!GameState.id || rainbow_name !== "开") return;
+    if (rainbow_name !== "开" && rainbow_name !== true && rainbow_name !== 'true') return;
     var playerElement = $(`.room-item[itemid="${GameState.id}"]`);
     if (playerElement.length > 0) {
         playerElement.find('.item-name').addClass('supernova-text');

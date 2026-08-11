@@ -6,7 +6,7 @@
 var GlobalInit = {
     gcdThread: null,
     init: function () {
-        
+
         WG.add_hook("dialog", function (data) {
             if (data.dialog == 'list') {
                 // 自动当铺购买
@@ -19,7 +19,7 @@ var GlobalInit = {
                     GameState.store.max_store_count = data.max_store_count;
                     GameState.store.sum = data.sum;
                     GameState.store.stores = data.stores;
-                    
+
                 } else if (data.store) {
                     // 单次存储
                     let scan_store = true;
@@ -28,7 +28,9 @@ var GlobalInit = {
 
                     for (let i = 0; i < GameState.packs.items.length; i++) {
                         let bag_item = GameState.packs.items[i];
-                        if (bag_item == null) { continue; }
+                        if (bag_item == null) {
+                            continue;
+                        }
                         if (bag_item.id == data.id) {     // 道具存于背包时, 先判断数量  若数量为0 删除背包数据,若不为0 修改背包数据
                             scan_store = false;
                             let over_num = bag_item.count - data.store;
@@ -44,7 +46,9 @@ var GlobalInit = {
                     if (scan_store) {   // 如果不存在于背包时, 添加数据到背包,并判断仓库数量
                         for (let j = 0; j < storeData.length; j++) {
                             let store_item = storeData[j];
-                            if (store_item == null) { continue; }
+                            if (store_item == null) {
+                                continue;
+                            }
                             if (store_item.id == data.storeid) {
                                 let item = {
                                     id: data.id,
@@ -62,7 +66,9 @@ var GlobalInit = {
                     let found_store = true;
                     for (let j = 0; j < storeData.length; j++) {
                         let store_item = storeData[j];
-                        if (store_item == null) { continue; }
+                        if (store_item == null) {
+                            continue;
+                        }
 
                         if (store_item.id == data.id) {
                             found_store = false;
@@ -80,7 +86,9 @@ var GlobalInit = {
                     if (found_store) {
                         for (let j = 0; j < GameState.packs.items.length; j++) {
                             let store_item = GameState.packs.items[j];
-                            if (store_item == null) { continue; }
+                            if (store_item == null) {
+                                continue;
+                            }
                             if (store_item.id === data.id) {
                                 let item = {
                                     id: data.stroeid,
@@ -100,7 +108,7 @@ var GlobalInit = {
                     if (store_remove_id != null) {
                         storeData.splice(store_remove_id, 1)
                     }
-                } else if (data.title == "唐楠正在贩卖以下物品：" && autoBuyList){
+                } else if (data.title == "唐楠正在贩卖以下物品：" && autoBuyList) {
                     messageAppend("<hig>自动当铺购买中，如有问题请检查设置</hig>")
                     let _seller;
                     let _itemids = new Map();
@@ -118,29 +126,43 @@ var GlobalInit = {
                         _sendcmd = _sendcmd + "$wait 500;";
                     });
                     WG.SendCmd(_sendcmd);
-                    
-                }; 
+
+                }
+                ;
             } else if (data.dialog == "score") {
                 for (let key in data) {
                     GameState.score[key] = data[key];
                 }
                 if (data.level) {
                     if (data.level.indexOf('武帝') >= 0 || data.level.indexOf('武神') >= 0 ||
-                    data.level.indexOf('剑神') >= 0 || data.level.indexOf('刀皇') >= 0 ||
-                    data.level.indexOf('兵主') >= 0 || data.level.indexOf('战神') >= 0) {
+                        data.level.indexOf('剑神') >= 0 || data.level.indexOf('刀皇') >= 0 ||
+                        data.level.indexOf('兵主') >= 0 || data.level.indexOf('战神') >= 0) {
                         GameState.score.isGod = true
-                    } else { GameState.score.isGod = false }
+                    } else {
+                        GameState.score.isGod = false
+                    }
                 }
                 if (data.family) {
                     GameState.score.family = data.family.replaceAll('派', '').replaceAll('楼', '');
-                    if (GameState.score.family == "无门无") {GameState.score.family = "武馆";}
+                    if (GameState.score.family == "无门无") {
+                        GameState.score.family = "武馆";
+                    }
                     family = GameState.score.family;
 
                     // 添加拼音映射
-                    const familyPyMap = {'武当': 'WUDANG','峨眉': 'EMEI','少林': 'SHAOLIN','逍遥': 'XIAOYAO','华山': 'HUASHAN','丐帮': 'GAI','杀手': 'SHASHOU','武馆': '' };
+                    const familyPyMap = {
+                        '武当': 'WUDANG',
+                        '峨眉': 'EMEI',
+                        '少林': 'SHAOLIN',
+                        '逍遥': 'XIAOYAO',
+                        '华山': 'HUASHAN',
+                        '丐帮': 'GAI',
+                        '杀手': 'SHASHOU',
+                        '武馆': ''
+                    };
                     GameState.score.family_py = familyPyMap[family] || '';
                     GM_setValue(roleid + "_family", GameState.score.family);
-                } 
+                }
             } else if (data.dialog == "pack") {
                 if (data.items != undefined) {
                     // 背包数据
@@ -152,28 +174,32 @@ var GlobalInit = {
                     GameState.packs.eqs = data.eqs;
                     GameState.packs.eq_group = data.eq_group;
 
-                    if (data.eq_group>=0) {
+                    if (data.eq_group >= 0) {
                         eqgroup = GM_getValue(roleid + "_eqgroup") || [];
-                        eqgroup[data.eq_group]= data.eqs;
+                        eqgroup[data.eq_group] = data.eqs;
                         GM_setValue(roleid + "_eqgroup", eqgroup);
                     }
                 }
                 // 脱下装备
-                if (data.uneq != undefined){
+                if (data.uneq != undefined) {
                     let p = WG.smartClone(GameState.packs.eqs[data.uneq]);
                     GameState.packs.eqs[data.uneq] = null;
                     GameState.packs.items.push(p);
                 }
                 // 添加装备
-                if (data.eq != undefined){
-                    let index = GameState.packs.items.findIndex(item => {return item.id === data.id;});
+                if (data.eq != undefined) {
+                    let index = GameState.packs.items.findIndex(item => {
+                        return item.id === data.id;
+                    });
                     let p = WG.smartClone(GameState.packs.items[index]);
                     GameState.packs.items.splice(index, 1);
                     GameState.packs.eqs[data.eq] = p;
                 }
                 if (data.remove) {
-                    let index = GameState.packs.items.findIndex(item => {return item.id === data.id;});
-                    if (index == -1)return;
+                    let index = GameState.packs.items.findIndex(item => {
+                        return item.id === data.id;
+                    });
+                    if (index == -1) return;
                     let item = GameState.packs.items[index];
                     let count = item.count - data.remove;
                     if (count <= 0) {
@@ -183,7 +209,9 @@ var GlobalInit = {
                     }
                 }
                 if (data.name != null) {
-                    let index = GameState.packs.items.findIndex(item => {return item.id === data.id;});
+                    let index = GameState.packs.items.findIndex(item => {
+                        return item.id === data.id;
+                    });
                     let old_count = index == -1 ? null : GameState.packs.items[index].count;
                     // 追加packs
                     let item = {
@@ -204,192 +232,199 @@ var GlobalInit = {
                     } else {
                         GameState.packs.items.push(item);
                     }
-                    
+
                     //  获得物品设置   
-                    if (getitemShow == "开" && !data.name.includes("<wht>")){
-                        let count = index == -1 ? data.count : data.count - old_count;
-                        let id = data.id;
-                        let str;
-                        if (data.can_eq == 1) {
-                            if (index != -1)return;
-                            str = `获得1${data.unit}${data.name}`;
-                        }
-                        if (!itemTotalCount[id]) {
-                            itemTotalCount[id] = 0;
-                        } else if (itemTotalCount[id]<0) return;
-                        
-                        itemTotalCount[id] += count;
-                        str = `获得<hiw>${itemTotalCount[id]}</hiw>${data.unit}${data.name}，共有<hiw>${data.count}</hiw>${data.unit}`;
-                        messageAppend(str, 0, id)
-                    }
-                }
-                if (data.can_use || data.can_open) {
-                    //生成快速使用按钮
-                    function autoUse(item) {
-                        if (/养精丹|朱果|潜灵果|背包扩充石|仓库扩充石|小箱子|师门补给包|随从礼包|技能重置包/.test(item.name)) {
-                            let cmd = ["stopstate"];
-                            let count = item.count;
-                            let zl = "use";
-                            if (/小箱子|师门补给包|随从礼包|技能重置包/.test(item.name)) zl = "open";
-                            for (let i = 0; i < count; i++) {
-                                cmd.push(`$wait 250;${zl} ${item.id}`);
+                    if (getitemShow == "开" || getitemShow === true || getitemShow === 'true') {
+                        if (!data.name.includes("<wht>")) {
+                            let count = index == -1 ? data.count : data.count - old_count;
+                            let id = data.id;
+                            let str;
+                            if (data.can_eq == 1) {
+                                if (index != -1) return;
+                                str = `获得1${data.unit}${data.name}`;
                             }
-                            $(".content-message pre").append(
-                                $(`<div class="item-commands"><span class="autouse">使用 ${item.name} ${count}次</span></div>`).click(() => WG.SendCmd(cmd)),
-                            );
-                            // AutoScroll(".content-message");
-                        }
-                    }
-                    //获得物品后检测生成快速使用按钮 -- fork from Suqing funny
-                    if (data.name) {
-                        autoUse(data);
-                    }
-                }
+                            if (!itemTotalCount[id]) {
+                                itemTotalCount[id] = 0;
+                            } else if (itemTotalCount[id] < 0) return;
 
-            } else if (data.dialog == "skills") {
-                // 技能数据
-                if (data.items) {
-                    GameState.skills.items = data.items;
-                    GameState.skills.limit = data.limit;
-                    GameState.skills.sk_group = data.sk_group;
-                    // 匹配装备的技能
-                    GameState.skills.items.forEach(item => {
-                        if (item.name.indexOf("基本") >= 0) {
-                            if (item.enable_skill) {
-                                GameState.skills.enable_skills[item.id].id = item.enable_skill;
-                            } else {
-                                GameState.skills.enable_skills[item.id] = {name:null,id:null};
-                            }
-                        } else {
-                            for (let key in GameState.skills.enable_skills) {
-                                if (GameState.skills.enable_skills[key].id && item.id == GameState.skills.enable_skills[key].id) {
-                                    GameState.skills.enable_skills[key].name = item.name;
+                            itemTotalCount[id] += count;
+                            str = `获得<hiw>${itemTotalCount[id]}</hiw>${data.unit}${data.name}，共有<hiw>${data.count}</hiw>${data.unit}`;
+                            messageAppend(str, 0, id)
+                        }
+                    }
+                    if (data.can_use || data.can_open) {
+                        //生成快速使用按钮
+                        function autoUse(item) {
+                            if (/养精丹|朱果|潜灵果|背包扩充石|仓库扩充石|小箱子|师门补给包|随从礼包|技能重置包/.test(item.name)) {
+                                let cmd = ["stopstate"];
+                                let count = item.count;
+                                let zl = "use";
+                                if (/小箱子|师门补给包|随从礼包|技能重置包/.test(item.name)) zl = "open";
+                                for (let i = 0; i < count; i++) {
+                                    cmd.push(`$wait 250;${zl} ${item.id}`);
                                 }
+                                $(".content-message pre").append(
+                                    $(`<div class="item-commands"><span class="autouse">使用 ${item.name} ${count}次</span></div>`).click(() => WG.SendCmd(cmd)),
+                                );
+                                // AutoScroll(".content-message");
                             }
                         }
-                    });
-                }
-                if (data.books) {
-                    // 书架
-                    GameState.skills.books = data.books
-                }
-                if (data.sk_group>=0) {
-                    // 保存技能组
-                    skgroup = GM_getValue(roleid + "_skgroup");
-                    setTimeout(() => {
-                        skgroup[data.sk_group]= GameState.skills.enable_skills
-                        GM_setValue(roleid + "_skgroup", skgroup);
-                    }, 200)
-                }
-                if (data.enable != undefined) {
-                    // 替换装备的技能
-                    for (let key in GameState.skills.enable_skills) {
-                        let item = GameState.skills.enable_skills[key];
-                        if (key == data.id) {
-                            item.id = data.enable
-                            for (let skill of GameState.skills.items) {
-                                if (skill.id == data.enable) {
-                                    item.name = skill.name;
-                                    break;
-                                }
-                            }
+
+                        //获得物品后检测生成快速使用按钮 -- fork from Suqing funny
+                        if (data.name) {
+                            autoUse(data);
                         }
                     }
-                }
-                if (data.enable != null && zdyskills == "开") {
-                    zdyskilllist == "";
-                    messageAppend("检测到更换技能,请刷新重新获取技能数据!");
-                    zdyskills = "关";
-                    GM_setValue(roleid + "_zdyskilllist", "");
-                    GM_setValue(roleid + "_zdyskills", zdyskills);
-                }
-            } else if (data.dialog == 'party' && data.name != undefined) {
-                GameState.relation.party = data.name;
-            } else if (data.dialog == 'team' && data.items != undefined) {
-                GameState.relation.team = data.items;
-            } else if (data.dialog == 'relation' && data.fls != undefined) {
-                GameState.relation.follower = data.fls.slice(0, -1);
-        
-                const workMap = { 挖矿: 'wk', 钓鱼: 'diao', 采药: 'cai' };
-                GameState.relation.follower.forEach(item => item[2] = workMap[item[2]]);
 
-                let fls = GameState.relation.follower;
-                let addr = GM_getValue(roleid + "_saveAddr");
-
-                for (let i = 0; i < fls.length; i++) {
-                    let wk = fls[i][2];
-                    if (wk && addr == "关") {
-                        addr = "开"
-                        GM_setValue(roleid + "_saveAddr", addr);
-                    } else if (!wk && addr == "开"){
-                        messageAppend(`<hiy>注意：随从<hir>${fls[i][0]}</hir>停止工作！！</hiy>`);
-                        fls[i][2] ='cai';
-                    }
-                }
-            } else if (data.dialog == 'jh') {
-                if (data.fbs) {
-                    fb_path = data.fbs;
-                }
-            } else if (data.dialog == "events"){
-                if (data.update || data.finish) {
-                    WG.SendCmd("events")
-                } else if (data.items && Array.isArray(data.items)) {
-                    GameState.events = data.items;
-                    // 检测喜宴和BOSS活动
-                    for (let n = 0; n < data.items.length; n++) {
-                        if (data.items[n] && data.items[n][0] === "marry") {
-                            var automarry = GM_getValue(roleid + "_automarry", automarry);
-                            if (automarry == "开" && GameState.fight.in_fight == false) {
-                                if (stopauto || WG.at('副本')) {
-                                    messageClear();
-                                    messageAppend("<hiy>已自动领取喜宴</hiy>");
-                                    WG.xiyan();
+                } else if (data.dialog == "skills") {
+                    // 技能数据
+                    if (data.items) {
+                        GameState.skills.items = data.items;
+                        GameState.skills.limit = data.limit;
+                        GameState.skills.sk_group = data.sk_group;
+                        // 匹配装备的技能
+                        GameState.skills.items.forEach(item => {
+                            if (item.name.indexOf("基本") >= 0) {
+                                if (item.enable_skill) {
+                                    GameState.skills.enable_skills[item.id].id = item.enable_skill;
                                 } else {
-                                    WG.xiyan();
+                                    GameState.skills.enable_skills[item.id] = {name: null, id: null};
                                 }
-                            } else if (automarry == "关" || GameState.fight.in_fight == true) {
-                                let b = "<div class=\"item-commands\"><span  id = 'onekeyjh'>参加喜宴</span></div>"
-                                messageClear();
-                                messageAppend("<hiy>点击参加喜宴</hiy>");
-                                messageAppend(b);
-                                $('#onekeyjh').on('click', function () {
-                                    WG.xiyan();
-                                });
+                            } else {
+                                for (let key in GameState.skills.enable_skills) {
+                                    if (GameState.skills.enable_skills[key].id && item.id == GameState.skills.enable_skills[key].id) {
+                                        GameState.skills.enable_skills[key].name = item.name;
+                                    }
+                                }
                             }
-                        } else if (data.items[n] && data.items[n][0].includes("boss")) {
-                            var boss_name = data.items[n][2].match(/(.*?)被击败了/)?.[1];
-                            BossName = GM_getValue(roleid + "_BossName", BossName);
-                            autoBoss = GM_getValue(roleid + "_autoBoss", autoBoss);
-                            if (boss_name == null || BossName=='') {continue;}
-                            if (boss_name && boss_name.includes("<hi")) {
-                                boss_name = boss_name.match(/<hi([^>]+)>(.*?)<\/hi\1>/)[2]
+                        });
+                    }
+                    if (data.books) {
+                        // 书架
+                        GameState.skills.books = data.books
+                    }
+                    if (data.sk_group >= 0) {
+                        // 保存技能组
+                        skgroup = GM_getValue(roleid + "_skgroup");
+                        setTimeout(() => {
+                            skgroup[data.sk_group] = GameState.skills.enable_skills
+                            GM_setValue(roleid + "_skgroup", skgroup);
+                        }, 200)
+                    }
+                    if (data.enable != undefined) {
+                        // 替换装备的技能
+                        for (let key in GameState.skills.enable_skills) {
+                            let item = GameState.skills.enable_skills[key];
+                            if (key == data.id) {
+                                item.id = data.enable
+                                for (let skill of GameState.skills.items) {
+                                    if (skill.id == data.enable) {
+                                        item.name = skill.name;
+                                        break;
+                                    }
+                                }
                             }
-                            if (boss_name != BossName) {continue;}
-                            if (autoBoss == "开" && GameState.fight.in_fight == false) {
-                                if (stopauto || WG.at('副本')) {
+                        }
+                    }
+                    if (data.enable != null && (zdyskills == "开" || zdyskills === true || zdyskills === 'true')) {
+                        zdyskilllist = "";
+                        messageAppend("检测到更换技能,请刷新重新获取技能数据!");
+                        zdyskills = false;
+                        GM_setValue(roleid + "_zdyskilllist", "");
+                        GM_setValue(roleid + "_zdyskills", zdyskills);
+                    }
+                } else if (data.dialog == 'party' && data.name != undefined) {
+                    GameState.relation.party = data.name;
+                } else if (data.dialog == 'team' && data.items != undefined) {
+                    GameState.relation.team = data.items;
+                } else if (data.dialog == 'relation' && data.fls != undefined) {
+                    GameState.relation.follower = data.fls.slice(0, -1);
+
+                    const workMap = {挖矿: 'wk', 钓鱼: 'diao', 采药: 'cai'};
+                    GameState.relation.follower.forEach(item => item[2] = workMap[item[2]]);
+
+                    let fls = GameState.relation.follower;
+                    let addr = GM_getValue(roleid + "_saveAddr");
+
+                    for (let i = 0; i < fls.length; i++) {
+                        let wk = fls[i][2];
+                        if (wk && (addr == "关" || addr === false || addr === 'false')) {
+                            addr = true
+                            GM_setValue(roleid + "_saveAddr", addr);
+                        } else if (!wk && (addr == "开" || addr === true || addr === 'true')) {
+                            messageAppend(`<hiy>注意：随从<hir>${fls[i][0]}</hir>停止工作！！</hiy>`);
+                            fls[i][2] = 'cai';
+                        }
+                    }
+                } else if (data.dialog == 'jh') {
+                    if (data.fbs) {
+                        fb_path = data.fbs;
+                    }
+                } else if (data.dialog == "events") {
+                    if (data.update || data.finish) {
+                        WG.SendCmd("events")
+                    } else if (data.items && Array.isArray(data.items)) {
+                        GameState.events = data.items;
+                        // 检测喜宴和BOSS活动
+                        for (let n = 0; n < data.items.length; n++) {
+                            if (data.items[n] && data.items[n][0] === "marry") {
+                                var automarry = GM_getValue(roleid + "_automarry", automarry);
+                                if ((automarry == "开" || automarry === true || automarry === 'true') && GameState.fight.in_fight == false) {
+                                    if (stopauto || WG.at('副本')) {
+                                        messageClear();
+                                        messageAppend("<hiy>已自动领取喜宴</hiy>");
+                                        WG.xiyan();
+                                    } else {
+                                        WG.xiyan();
+                                    }
+                                } else if ((automarry == "关" || automarry === false || automarry === 'false') || GameState.fight.in_fight == true) {
+                                    let b = "<div class=\"item-commands\"><span  id = 'onekeyjh'>参加喜宴</span></div>"
+                                    messageClear();
+                                    messageAppend("<hiy>点击参加喜宴</hiy>");
+                                    messageAppend(b);
+                                    $('#onekeyjh').on('click', function () {
+                                        WG.xiyan();
+                                    });
+                                }
+                            } else if (data.items[n] && data.items[n][0].includes("boss")) {
+                                var boss_name = data.items[n][2].match(/(.*?)被击败了/)?.[1];
+                                BossName = GM_getValue(roleid + "_BossName", BossName);
+                                autoBoss = GM_getValue(roleid + "_autoBoss", autoBoss);
+                                if (boss_name == null || BossName == '') {
+                                    continue;
+                                }
+                                if (boss_name && boss_name.includes("<hi")) {
+                                    boss_name = boss_name.match(/<hi([^>]+)>(.*?)<\/hi\1>/)[2]
+                                }
+                                if (boss_name != BossName) {
+                                    continue;
+                                }
+                                if ((autoBoss == "开" || autoBoss === true || autoBoss === 'true') && GameState.fight.in_fight == false) {
+                                    if (stopauto || WG.at('副本')) {
+                                        let b = "<div class=\"item-commands\"><span  id = 'onekeyboss'>领取BOSS</span></div>"
+                                        messageClear();
+                                        messageAppend("<hiy>自动领取boss</hiy>");
+                                        messageAppend(b);
+                                        $('#onekeyboss').on('click', function () {
+                                            WG.collBoss(data.items[n]);
+                                        });
+                                    } else {
+                                        WG.collBoss(data.items[n]);
+                                    }
+                                } else if (GameState.fight.in_fight == true) {
                                     let b = "<div class=\"item-commands\"><span  id = 'onekeyboss'>领取BOSS</span></div>"
                                     messageClear();
-                                    messageAppend("<hiy>自动领取boss</hiy>");
+                                    messageAppend("<hiy>点击参加领取BOSS,由于未开启自动领取,或者在战斗中,需要手动领取</hiy>");
                                     messageAppend(b);
                                     $('#onekeyboss').on('click', function () {
-                                    WG.collBoss(data.items[n]);
-                                });
-                                } else {
-                                    WG.collBoss(data.items[n]);
+                                        WG.collBoss(data.items[n]);
+                                    });
                                 }
-                            } else if (GameState.fight.in_fight == true) {
-                                let b = "<div class=\"item-commands\"><span  id = 'onekeyboss'>领取BOSS</span></div>"
-                                messageClear();
-                                messageAppend("<hiy>点击参加领取BOSS,由于未开启自动领取,或者在战斗中,需要手动领取</hiy>");
-                                messageAppend(b);
-                                $('#onekeyboss').on('click', function () {
-                                    WG.collBoss(data.items[n]);
-                                });
                             }
                         }
                     }
                 }
-            };
+            }
         });
 
         WG.add_hook(["status", "login", "exits", "room", "items", "itemadd", "itemremove", "sc", "text", "state", "msg", "perform", "clearDistime", "dispfm", "combat", "die"], function (data) {
@@ -540,7 +575,7 @@ var GlobalInit = {
                                 status: item.status
                             });
                         }
-                         // 添加新房间BUFF计时
+                        // 添加新房间BUFF计时
                         if (item.status && item.status.length > 0) {
                             for (let j = 0; j < item.status.length; j++) {
                                 const statusItem = item.status[j];
@@ -580,10 +615,10 @@ var GlobalInit = {
                         if (data.status && data.status.length > 0) {
                             for (let i = 0; i < data.status.length; i++) {
                                 const statusItem = data.status[i];
-                                showBuffDuration(statusItem.sid, statusItem.duration, data.id, statusItem.count || 0,  statusItem.overtime);
+                                showBuffDuration(statusItem.sid, statusItem.duration, data.id, statusItem.count || 0, statusItem.overtime);
                             }
                         }
-                        
+
                     }
                     break;
                 case "itemremove":
@@ -617,17 +652,17 @@ var GlobalInit = {
                     break
                 case 'clearDistime':
                     WG.cds.forEach(function (v, k) {
-                        WG.cds.set(k, { iscd: false, distime: 0 });
+                        WG.cds.set(k, {iscd: false, distime: 0});
                         // 清除对应技能的CD显示
                         clearSkillCDDisplay(k);
                     });
                     break;
                 case 'dispfm':
                     if (data.id) {
-                        WG.cds.set(data.id, { iscd: true, distime: data.distime || 0 });
+                        WG.cds.set(data.id, {iscd: true, distime: data.distime || 0});
                         var _id = data.id;
                         setTimeout(function () {
-                            WG.cds.set(_id, { iscd: false, distime: 0 });
+                            WG.cds.set(_id, {iscd: false, distime: 0});
                             //技能cd时间到
                             let pfmtimeTips = {
                                 data: JSON.stringify({
@@ -695,7 +730,7 @@ var GlobalInit = {
                             GameState.selfStatus = []
                         }
                     }
-                   
+
                     let item = GameState.items.get(data.id);
                     if (item == null) {
                         break;
@@ -708,13 +743,19 @@ var GlobalInit = {
                         // 查找对应的BUFF
                         const buffIndex = item.status.findIndex(buff => buff.sid === data.sid);
                         let currentDuration = data.duration;
-                        
+
                         if (buffIndex !== -1) {
                             // 更新
                             item.status[buffIndex].duration = data.duration || item.status[buffIndex].duration;
                             currentDuration = item.status[buffIndex].duration;
                         } else {
-                            item.status.push({ sid: data.sid, name: data.name, duration: data.duration, count: data.count || 0, overtime: 0 }); 
+                            item.status.push({
+                                sid: data.sid,
+                                name: data.name,
+                                duration: data.duration,
+                                count: data.count || 0,
+                                overtime: 0
+                            });
                         }
                         showBuffDuration(data.sid, currentDuration, data.id, data.count || 0, 0);
 
@@ -735,14 +776,14 @@ var GlobalInit = {
                             clearBuffDisplay(item.status[i].sid, id);
                             item.status.splice(i, 1);
                         }
-                    } 
-                     // 控制信息显示
-                    if (busy_info === '开') {
+                    }
+                    // 控制信息显示
+                    if (busy_info === '开' || busy_info === true || busy_info === 'true') {
                         if (data.id == GameState.id) {
                             if (data.action == 'add') {
                                 if (data.sid == 'busy' || data.sid == 'faint') {
                                     var _id = data.id;
-                                    messageAppend(`<hig>你被${data.name}了${data.duration / 1000}秒`, 0, data.id+'_'+data.name);
+                                    messageAppend(`<hig>你被${data.name}了${data.duration / 1000}秒`, 0, data.id + '_' + data.name);
                                     if (data.name == '绊字诀') return;
                                 }
                             }
@@ -750,19 +791,21 @@ var GlobalInit = {
                             if (data.action == 'add') {
                                 if (data.sid == 'busy' || data.sid == 'faint' || data.sid == 'chidun' || data.sid == 'unarmed') {
                                     let npc = GameState.items.get(data.id)
-                                    messageAppend(`<hig>${npc.name}被${data.name}了${data.duration / 1000}秒`, 0, data.id+'_'+data.name);
+                                    messageAppend(`<hig>${npc.name}被${data.name}了${data.duration / 1000}秒`, 0, data.id + '_' + data.name);
                                 }
                             }
                         }
                     }
                     break
                 case "text":
-                    if (data.msg.indexOf("今日副本次数") >=0 && data.msg.indexOf("BOSS挑战") >= 0){
+                    if (data.msg.indexOf("今日副本次数") >= 0 && data.msg.indexOf("BOSS挑战") >= 0) {
                         const info = data.msg;
                         const regex = /武道塔进度\d+层，已累积(\d+)份奖励\n武道残页总量\d+\n门派职位等级[^，\n]+，已累积(\d+)份师门物资\n衙门职位等级[^，\n]+，已累积(\d+)份奖励\n今日副本次数(\d+)\/20\nBOSS挑战(\d+)\/5\n([^，\n]+)\n(获取圣元碎片(\d+)\/1\n)?(获取帝魄碎片(\d+)\/1\n)?获取额外(\d+)\/(\d+)师门功绩\n本周已经获取襄阳军功(\d+)\/(\d+)\n已领取(\d+)\/(\d+)奖励军功/;
                         const matches = info.match(regex);
 
-                        if (!matches) {return;}
+                        if (!matches) {
+                            return;
+                        }
 
                         const result = {
                             wudao: parseInt(matches[1], 10),
@@ -784,50 +827,62 @@ var GlobalInit = {
                             jungong1: parseInt(matches[15], 10)
                         };
 
-                        if (result.wudao>5) {
+                        if (result.wudao > 5) {
                             messageAppend(`<hir>武道塔累积${result.wudao}天，武道塔累积${result.wudao}天，请尽快领取</hir>`);
-                        };
-                        if (result.shimen>48) {
+                        }
+                        ;
+                        if (result.shimen > 48) {
                             messageAppend(`<hir>师门累积${result.shimen}份，请尽快领取</hir>`);
-                        };
-                        if (result.yamen>48) {
+                        }
+                        ;
+                        if (result.yamen > 48) {
                             messageAppend(`<hir>衙门累积${result.yamen}份，请尽快领取</hir>`);
-                        };
-                        if (result.fuben<20) {
+                        }
+                        ;
+                        if (result.fuben < 20) {
                             messageAppend(`<hir>免费精力未用完，请尽快使用</hir>`);
-                        };
-                        if (result.boss<5) {
-                            autoBoss = "开";
+                        }
+                        ;
+                        if (result.boss < 5) {
+                            autoBoss = true;
                             messageAppend(`<hiy>Boss次数未用完，已开启自动领取Boss</hiy>`);
                             GM_setValue(roleid + "_autoBoss", autoBoss);
                         } else {
-                            autoBoss = "关";
+                            autoBoss = false;
                             GM_setValue(roleid + "_autoBoss", autoBoss);
-                        };
+                        }
+                        ;
                         if (result.qingan) {
                             WG.SendCmd('sx greet')
                             messageAppend(`<hiy>未请安，已自动请安</hiy>`);
-                        };
-                        if (result.shengyuan===0) {
+                        }
+                        ;
+                        if (result.shengyuan === 0) {
                             messageAppend(`<hir>圣元碎片未获取，请尽快获取</hir>`);
-                        };
-                        if (result.dipo===0) {
+                        }
+                        ;
+                        if (result.dipo === 0) {
                             messageAppend(`<hir>帝魄碎片未获取，请尽快获取</hir>`);
-                        };
-                        if (result.gongji.cur<result.gongji.max) {
+                        }
+                        ;
+                        if (result.gongji.cur < result.gongji.max) {
                             messageAppend(`<hir>门派战功绩未满，请尽快获取</hir>`);
-                        };
-                        if (result.jungong.cur<result.jungong.max) {
+                        }
+                        ;
+                        if (result.jungong.cur < result.jungong.max) {
                             messageAppend(`<hir>军功未满，请尽快获取</hir>`);
-                        };
-                        if (result.jungong1==0) {
+                        }
+                        ;
+                        if (result.jungong1 == 0) {
                             messageAppend(`<hir>胜利军功未领取，请尽快领取</hir>`);
-                        };
-                        if(result.fuben>=20&&result.boss>=5&&!result.qingan&&result.shengyuan!==0&&result.dipo!==0&&result.gongji.cur>=result.gongji.max){
+                        }
+                        ;
+                        if (result.fuben >= 20 && result.boss >= 5 && !result.qingan && result.shengyuan !== 0 && result.dipo !== 0 && result.gongji.cur >= result.gongji.max) {
                             messageAppend(`<hig>今日任务全部完成!</hig>`);
-                        };
+                        }
+                        ;
 
-                     }
+                    }
 
                     if (data.msg.indexOf("还没准备好，你还不能使用。") >= 0) {
                         // let skillname = data.msg.replaceAll("还没准备好，你还不能使用。","");
@@ -846,7 +901,7 @@ var GlobalInit = {
                         }
                     }
                     if ((data.msg.indexOf("不要急") >= 0 || data.msg.indexOf("你现在手忙脚乱") >= 0 ||
-                         data.msg.indexOf("你正在昏迷") >= 0 || data.msg.indexOf("你上个技能") >= 0) && auto_pfmswitch == "开") {
+                        data.msg.indexOf("你正在昏迷") >= 0 || data.msg.indexOf("你上个技能") >= 0) && (auto_pfmswitch == "开" || auto_pfmswitch === true || auto_pfmswitch === 'true')) {
                         if (!WG.gcd) {
                             WG.gcd = true;
                             setTimeout(() => {
@@ -890,11 +945,11 @@ var GlobalInit = {
                     $('#shield').val(shield);
                     messageAppend("<hiy>已屏蔽", 1);
                 });
-            } else if (dpssakada == '开' && /.*造成<.*>.*<\/.*>点.*/.test(data.msg)) {
+            } else if ((dpssakada == '开' || dpssakada === true || dpssakada === 'true') && /.*造成<.*>.*<\/.*>点.*/.test(data.msg)) {
                 let pdata = data.msg;
                 let a = pdata.split(/.*造成<wht>|.*造成<hir>|<\/wht>点|<\/hir>点/);
                 let b = a[2].split(/伤害|\(|</);
-                
+
                 if (b[2] != '你') {
                     if (b[0] == '暴击') {//判断关键字
                         //critDamageTotal = critDamageTotal + parseInt(a[1]);
@@ -932,7 +987,7 @@ var GlobalInit = {
                         GameState.fight.fight_id = room.id;
                     }
                 }
-            } else if (onekey_fenjie == "开" && (data.msg.indexOf("你将身上的杂物卖了") >= 0 || data.msg.indexOf("你身上的杂物已经清理干净了") >= 0)) {
+            } else if ((onekey_fenjie == "开" || onekey_fenjie === true || onekey_fenjie === 'true') && (data.msg.indexOf("你将身上的杂物卖了") >= 0 || data.msg.indexOf("你身上的杂物已经清理干净了") >= 0)) {
                 // 自动一键分解
                 let fjlist = GM_getValue(roleid + "_fenjieList").split(",");
                 let pack = GameState.packs.items;
@@ -940,24 +995,25 @@ var GlobalInit = {
                 if (fjlist && fjlist.length > 0) {
                     let cmd0 = "";
                     let cmd1 = "";
-                    if (follower_fenjie == '开') {
+                    if (follower_fenjie == '开' || follower_fenjie === true || follower_fenjie === 'true') {
                         cmd0 = `goto home;go northeast;$wait 200;dc {r${fj_sc}} stopstate;$wait 1000;`
                         let fwork = GameState.relation.follower.find(i => i[0].includes(fj_sc))?.[2];
                         cmd1 = `dc {r${fj_sc}} ${fwork};`
-                    };
+                    }
+                    ;
                     for (let i = 0; i < fjlist.length; i++) {
                         let item = fjlist[i].trim();
                         let match = item.match(/^([\u4e00-\u9fa5]+)(\d*)$|^(\d+)$/);
                         let name = match?.[3] ? null : (match?.[1] || null);
                         let grade = match?.[3] || match?.[2] || null;
-                        
+
                         for (let j = 0; j < pack.length; j++) {
-                            if (!pack[j].can_eq||pack[j].locked) continue;
+                            if (!pack[j].can_eq || pack[j].locked) continue;
                             let nameMatch = name ? pack[j].name.includes(name) : true;
                             let gradeMatch = grade ? pack[j].grade == grade : true;
                             if (nameMatch && gradeMatch) {
                                 let id = pack[j].id;
-                                if (follower_fenjie == '开') {
+                                if (follower_fenjie == '开' || follower_fenjie === true || follower_fenjie === 'true') {
                                     cmd += `give {r${fj_sc}} ${id};dc {r${fj_sc}} fenjie ${id};$wait 600;`;
                                 } else {
                                     cmd += `fenjie ${id};$wait 400;`;
@@ -965,16 +1021,16 @@ var GlobalInit = {
                             }
                         }
                     }
-                    if(!cmd)return;
-                    if(cmd0)WG.SendCmd(cmd0+cmd+cmd1);
+                    if (!cmd) return;
+                    if (cmd0) WG.SendCmd(cmd0 + cmd + cmd1);
                     else WG.SendCmd(cmd);
                 }
-            } else if (/你获得了(.*)点经验，(.*)点潜能/.test(data.msg) && funnycalc == '开') {
+            } else if (/你获得了(.*)点经验，(.*)点潜能/.test(data.msg) && (funnycalc == '开' || funnycalc === true || funnycalc === 'true')) {
                 let x = data.msg.match(/获得了(.*)点经验，(.*)点潜能/);
                 expGained += parseInt(x[1]);
                 potGained += parseInt(x[2]);
                 $(".content-message pre #total").remove();
-                setTimeout(() => messageAppend(`\n共计获得了<hig>${expGained}</hig>点经验和<hig>${potGained}</hig>点潜能。`,1,"totla"), 50);
+                setTimeout(() => messageAppend(`\n共计获得了<hig>${expGained}</hig>点经验和<hig>${potGained}</hig>点潜能。`, 1, "totla"), 50);
                 // messageAppend(`\n共计获得了<hig>${expGained}</hig>点经验和<hig>${potGained}</hig>点潜能。`,1,"totla")
 
             } else if (/你从武道秘籍中领悟到了/.test(data.text)) {
@@ -1013,6 +1069,7 @@ var GlobalInit = {
                     setTimeout(sendRoles, 1000);
                 }
             }
+
             sendRoles();
 
             setTimeout(() => {

@@ -204,7 +204,11 @@ $(document).ready(function () {
                 "设置": {
                     name: "设置",
                     callback: function (key, opt) {
-                        WG.setting();
+                        if (unsafeWindow.showExtSettings) {
+                            unsafeWindow.showExtSettings();
+                        } else {
+                            WG.setting();
+                        }
                     },
                 },
                 "打开快捷操作栏": {

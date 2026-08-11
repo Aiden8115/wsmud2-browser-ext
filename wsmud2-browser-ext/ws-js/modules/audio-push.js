@@ -84,7 +84,7 @@ function Beep() {
 };
 function Push(text) {
     if (text) {
-        if (pushSwitch != '开' || pushType == null || pushToken == null) {
+        if ((pushSwitch != '开' && pushSwitch !== true && pushSwitch !== 'true') || pushType == null || pushToken == null) {
             messageAppend("<hiy>通知功能未开启或设置不完整，请在 右键菜单-设置 中设置开启。");
             return;
         }

@@ -160,7 +160,7 @@ Object.assign(WG, {
             stopauto = false;
         },
         go: async function (p) {
-            if (saveAddr == '开' && p == '扬州城-钱庄') {
+            if ((saveAddr == '开' || saveAddr === true || saveAddr === 'true') && p == '扬州城-钱庄') {
                 p = '住房-卧室'
             }
             if (needfind[p] == undefined) {
@@ -177,7 +177,7 @@ Object.assign(WG, {
             }
         },
         at: function (p) {
-            if (saveAddr == '开' && p == '扬州城-钱庄') {
+            if ((saveAddr == '开' || saveAddr === true || saveAddr === 'true') && p == '扬州城-钱庄') {
                 p = '住房-卧室'
             }
             var w = $(".room-name").html();
@@ -408,19 +408,19 @@ Object.assign(WG, {
         switchReversal: function (e) {
             let p = e.hasClass("on");
             if (!p) {
-                return "开";
+                return true;
             }
-            return "关";
+            return false;
         },
 
         auto_preform_switch: function () {
-            if (auto_pfmswitch == "开") {
-                auto_pfmswitch = "关";
+            if (auto_pfmswitch == "开" || auto_pfmswitch === true || auto_pfmswitch === 'true') {
+                auto_pfmswitch = false;
                 messageAppend("<hio>自动施法</hio>关闭");
 
                 WG.auto_preform("stop");
             } else {
-                auto_pfmswitch = "开";
+                auto_pfmswitch = true;
                 messageAppend("<hio>自动施法</hio>开启");
                 WG.auto_preform();
             }
@@ -452,7 +452,7 @@ Object.assign(WG, {
                 }
                 return;
             }
-            if (WG.preform_timer || auto_pfmswitch == "关") return;
+            if (WG.preform_timer || auto_pfmswitch == "关" || auto_pfmswitch === false || auto_pfmswitch === 'false') return;
             $(".auto_perform").css("background", "#3E0000");
             //出招时重新获取黑名单
             unauto_pfm = GM_getValue(roleid + "_unauto_pfm", unauto_pfm);
@@ -470,7 +470,7 @@ Object.assign(WG, {
                 blackpfm.push('force.tuoli');
             }
             // 如果 auto_pfm_mode 等于 true 则使用智能施法
-            if (auto_pfm_mode == "开") {
+            if (auto_pfm_mode == "开" || auto_pfm_mode === true || auto_pfm_mode === 'true') {
                 let force_buff_skill = ['force.cui', 'force.power', 'force.xi',
                                         'force.xin', 'force.chu', 'force.ztd', 'force.zhen', 'force.busi', 'force.wang'];
                 let buff_skill_dict = {
@@ -629,7 +629,7 @@ Object.assign(WG, {
             WG.SendCmd(commands);
             messageAppend(`<hig>已自动领取boss</hig>`);
 
-            autoBoss = "关"
+            autoBoss = false
             GM_setValue(roleid + "_autoBoss", autoBoss);
             messageAppend(`<hiy>已关闭自动领取boss，下次领取前请重新开启</hiy>`)
 

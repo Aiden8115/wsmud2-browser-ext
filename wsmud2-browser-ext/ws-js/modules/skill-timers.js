@@ -146,7 +146,7 @@ function clearAllBuffTimers() {
 
 // 技能CD显示函数
 function showSkillCD(id, distime, overtime = 0) {
-    if (skillCD !== "开") return;
+    if (skillCD !== "开" && skillCD !== true && skillCD !== 'true') return;
     // 查找元素
     const elements = document.querySelectorAll(`.pfm-item[pid="${id}"]`);
     if (elements.length === 0) {console.log(`找不到SKILL元素:pid=${pid}, id=${id}`);return;}
@@ -170,7 +170,7 @@ function showSkillCD(id, distime, overtime = 0) {
 // BUFF持续时间显示函数
 function showBuffDuration(sid, duration, id, count = 0, overtime = 0) {
     // 只有当buffCD为"开"时才执行
-    if (buffCD !== "开") return;
+    if (buffCD !== "开" && buffCD !== true && buffCD !== 'true') return;
     // 延时100毫秒，等待元素刷新
     setTimeout(() => {
         const elements = document.querySelectorAll(`.room-item[itemid="${id}"] .status-item[sid="${sid}"]`);

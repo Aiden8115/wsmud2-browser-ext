@@ -319,8 +319,8 @@ const TaskHelper = {
     },
     stoppfm: async function (idx = 0, n, cmds) {
         cmds = TaskHelper.recmd(idx, cmds);
-        if (auto_pfmswitch == "开") {
-            auto_pfmswitch = "关";
+        if (auto_pfmswitch == "开" || auto_pfmswitch === true || auto_pfmswitch === 'true') {
+            auto_pfmswitch = false;
             messageAppend("<hio>自动施法</hio>关闭");
             WG.auto_preform("stop");
         }
@@ -329,8 +329,8 @@ const TaskHelper = {
     },
     startpfm: async function (idx = 0, n, cmds) {
         cmds = TaskHelper.recmd(idx, cmds);
-        if (auto_pfmswitch == "关") {
-            auto_pfmswitch = "开";
+        if (auto_pfmswitch == "关" || auto_pfmswitch === false || auto_pfmswitch === 'false') {
+            auto_pfmswitch = true;
             messageAppend("<hio>自动施法</hio>开启");
             WG.auto_preform();
         }

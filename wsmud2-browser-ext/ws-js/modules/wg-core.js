@@ -928,7 +928,7 @@ Object.assign(WG, {
                       rolep = GameState.score.level + role;
                   }
                   if (CanUse) {
-                      if (shieldswitch == "开") {
+                      if (shieldswitch == "开" || shieldswitch === true || shieldswitch === 'true') {
                           messageAppend('已注入屏蔽系统', 1);
                       }
 

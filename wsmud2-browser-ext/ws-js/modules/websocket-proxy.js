@@ -69,7 +69,7 @@ if (WebSocket) {
                 GameState.connected = false;
                 auto_relogin = GM_getValue(roleid + "_auto_relogin", auto_relogin);
                 fn(e);
-                if (auto_relogin == "开") {
+                if (auto_relogin == "开" || auto_relogin === true || auto_relogin === 'true') {
                     setTimeout(() => {
                         console.log(new Date());
                         KEY.do_command("score");
