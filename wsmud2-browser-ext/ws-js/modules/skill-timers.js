@@ -11,8 +11,8 @@ function getBuffTimerKey(sid, id) {
     return `${sid}-${id}`;
 }
 
-// 通用显示更新函数，参数：HTML元素、人物id、技能文本、技能时长、定时器、已过时间
-function updateDurationDisplay(selector, id, originalText, totalSeconds, timerMap, overtime = 0) {
+// 通用显示更新函数，参数：HTML元素、人物id、技能文本、技能时长、定时器、已过时间、显示颜色
+function updateDurationDisplay(selector, id, originalText, totalSeconds, timerMap, overtime = 0, colorTag = 'hir') {
     let remainingSeconds =totalSeconds - overtime / 1000
     // 更新函数
     const update = () => {
@@ -36,10 +36,10 @@ function updateDurationDisplay(selector, id, originalText, totalSeconds, timerMa
             
             if (selector.startsWith('.pfm-item')) {
                 // SKILLcd 显示：换行并锁定在原元素正下方
-                el.innerHTML = `${originalText}<br><span><hir>${displayTime}s</hir></span>${shadowStyle}`;
+                el.innerHTML = `${originalText}<br><span><${colorTag}>${displayTime}s</${colorTag}></span>${shadowStyle}`;
             } else {
                 // 其他情况保持原有显示
-                el.innerHTML = `${originalText}<hir>${displayTime}s</hir>${shadowStyle}`;
+                el.innerHTML = `${originalText}<${colorTag}>${displayTime}s</${colorTag}>${shadowStyle}`;
             }
         });
         
@@ -69,10 +69,10 @@ function updateDurationDisplay(selector, id, originalText, totalSeconds, timerMa
                 const spaces = '0.0s'; // 5个全角空格，对应"00.0s"的宽度
                 if (selector.startsWith('.pfm-item')) {
                     // SKILLcd 显示：换行并锁定在原元素正下方
-                    el.innerHTML = `${originalText}<br><span><hir>${spaces}</hir></span>${shadowStyle}`;
+                    el.innerHTML = `${originalText}<br><span><${colorTag}>${spaces}</${colorTag}></span>${shadowStyle}`;
                 } else {
                     // 其他情况保持原有显示
-                    el.innerHTML = `${originalText}<hir>${spaces}</hir>${shadowStyle}`;
+                    el.innerHTML = `${originalText}<${colorTag}>${spaces}</${colorTag}>${shadowStyle}`;
                 }
                 // 保留originalText，以便下次添加计时前清除
             });
@@ -164,7 +164,7 @@ function showSkillCD(id, distime, overtime = 0) {
     
     const totalSeconds = distime / 1000;
     
-    updateDurationDisplay(`.pfm-item[pid="${id}"]`, id, elements[0].originalText, totalSeconds, skillCDTimers, overtime);
+    updateDurationDisplay(`.pfm-item[pid="${id}"]`, id, elements[0].originalText, totalSeconds, skillCDTimers, overtime, skillCDColor);
 }
 
 // BUFF持续时间显示函数
@@ -197,7 +197,7 @@ function showBuffDuration(sid, duration, id, count = 0, overtime = 0) {
             finalOriginalText = finalOriginalText.replace(/x\d+$/, '') + `x${count}`;
         }
         // 使用通用显示更新函数，确保只在特定room-item下添加BUFF文本
-        updateDurationDisplay(`.room-item[itemid="${id}"] .status-item[sid="${sid}"]`, getBuffTimerKey(sid, id), finalOriginalText, totalSeconds, buffTimers, overtime);
+        updateDurationDisplay(`.room-item[itemid="${id}"] .status-item[sid="${sid}"]`, getBuffTimerKey(sid, id), finalOriginalText, totalSeconds, buffTimers, overtime, buffCDColor);
     }, 100);
 }
 

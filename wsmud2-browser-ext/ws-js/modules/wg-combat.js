@@ -23,6 +23,9 @@ Object.assign(WG, {
               for(let key in itemTotalCount){
                   delete itemTotalCount[key];
               }
+              for(let key in raidItemData){
+                  delete raidItemData[key];
+              }
               messageAppend("清空成功");
           });
       },
@@ -221,9 +224,11 @@ Object.assign(WG, {
         cmd_echo_button: function () {
             if (cmd_echo) {
                 cmd_echo = false;
+                $(".cmd_echo").html('<hir>命令代码：隐藏</hir>');
                 messageAppend("<hio>命令代码关闭</hio>");
             } else {
                 cmd_echo = true;
+                $(".cmd_echo").html('<hig>命令代码：显示</hig>');
                 messageAppend("<hio>命令代码显示</hio>");
             }
         },

@@ -53,7 +53,7 @@ var SettingsStore = {
             if (res && res == "true") {
                 callback(res);
             } else {
-                messageAppend("失败了,或配置已存在");
+                messageAppend("失败了，或配置已存在");
             }
         });
     }

@@ -602,13 +602,86 @@ Object.assign(WG, {
 
                   GlobalInit.configInit();
 
-                  WG.setting();
                   WG.ztjk_func();
                   WG.zml_showp();
                   WG.dsj_func();
                   LayerHelper.msg("已成功加载");
               }
           });
+      },
+      reset_default: function () {
+          if (!confirm("确定要恢复默认设置吗？\n此操作将清除当前角色的所有自定义配置（含自命令、自定义监控），且不可撤销。")) {
+              return;
+          }
+          // 删除当前角色所有GM存储值
+          GM_listValues().forEach(key => {
+              if (key.indexOf(roleid) >= 0) {
+                  GM_deleteValue(key);
+              }
+          });
+          // 删除全局屏蔽/推送配置
+          GM_deleteValue("_shieldswitch");
+          GM_deleteValue("_shield");
+          GM_deleteValue("_shieldkey");
+          GM_deleteValue("_pushSwitch");
+          GM_deleteValue("_pushType");
+          GM_deleteValue("_pushToken");
+          GM_deleteValue("color_select");
+          // 恢复变量为默认值
+          family = null;
+          auto_relogin = null;
+          dpssakada = true;
+          funnycalc = false;
+          rainbow_name = null;
+          loginhml = '';
+          autowork = '0';
+          busy_info = true;
+          skillCD = false;
+          buffCD = true;
+          getitemShow = true;
+          zmlshowsetting = 0;
+          automarry = true;
+          autoBoss = null;
+          BossName = null;
+          auto_command = null;
+          unauto_pfm = '';
+          auto_pfmswitch = false;
+          auto_pfm_mode = true;
+          autoBuyList = "";
+          onekey_fenjie = false;
+          follower_fenjie = false;
+          fj_sc = "";
+          fenjieList = "";
+          die_str = "";
+          custom_dock = 0;
+          color_select = "normal";
+          backimageurl = '';
+          shieldswitch = false;
+          shield = '';
+          shieldkey = '';
+          pushSwitch = false;
+          pushType = "0";
+          pushToken = "";
+          zml = [];
+          ztjk_item = [];
+          zdyskills = false;
+          zdyskilllist = "";
+          saveAddr = false;
+          timequestion = [];
+          inzdy_btn = false;
+          zdy_btnlist = [];
+          stopauto = false;
+          eqgroup = [];
+          skgroup = [];
+          cmd_echo = false;
+          Coding = 0;
+
+          GlobalInit.configInit();
+          WG.setting();
+          WG.ztjk_func();
+          WG.zml_showp();
+          WG.dsj_func();
+          LayerHelper.msg("已恢复默认设置，请刷新页面生效");
       }, //设置
       setting: function () {
           KEY.do_command("setting");
@@ -644,6 +717,7 @@ Object.assign(WG, {
           $('.clear_skillJson').off('click')
           $('.backup_btn').off('click')
           $('.load_btn').off('click')
+          $('.reset_default_btn').off('click')
           $('#autoBuy').off('change')
           $('#backimageurl').off('change')
           $('#shieldkey').off('focusout');
@@ -869,6 +943,7 @@ Object.assign(WG, {
           });
           $('.backup_btn').on('click', WG.make_config);
           $('.load_btn').on('click', WG.load_config);
+          $('.reset_default_btn').on('click', WG.reset_default);
           $('.clear_skillJson').on('click', () => {
               zdyskilllist = "";
               messageAppend("已关闭自定义，请刷新重新获取技能数据!");

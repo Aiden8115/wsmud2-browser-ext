@@ -278,9 +278,12 @@ var busy_info = true;
 //显示CD信息
 var skillCD = false;
 var buffCD = true;
+var skillCDColor = 'hir';
+var buffCDColor = 'hig';
 // 获得物品展示设置
 var getitemShow = true;
 var itemTotalCount = {};
+var raidItemData = {};
 var zmlshowsetting = 0;
 
 // 自动喜宴

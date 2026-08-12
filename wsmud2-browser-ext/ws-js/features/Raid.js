@@ -4193,10 +4193,120 @@ $to 住房-练功房;dazuo
         _performers: {}
     };
 
+    //---------------------------------------------------------------------------
+    //  Syntax Highlighter for Raid Script
+    //---------------------------------------------------------------------------
+
+    const RaidScriptColors = {
+        comment: '#9e9e9e',
+        varColon: '#fff176',
+        varNormal: '#4dd0e1',
+        cmd: '#4fc3f7',
+        dir: '#81c784',
+        ctrl: '#ffb74d',
+        str: '#ef9a9a',
+        operator: '#ce93d8',
+        number: '#a5d6a7'
+    };
+
+    /**
+     * Highlight Raid script source code to HTML with colored spans.
+     * @param {string} code - Raw source code
+     * @returns {string} HTML with syntax highlighting spans
+     */
+    function highlightRaidSyntax(code) {
+        var escaped = code
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;');
+
+        // Single-pass token highlighting via alternation regex
+        return escaped.replace(
+            /(\/\/[^\n]*)|(\(:\w+\))|(\(\$\w+\))|(@\w+)|(#\w+)|(\[[\w\u4e00-\u9fa5\s]+\])|("(?:[^"\\]|\\.)*")|('(?:[^'\\]|\\.)*')|(\b\d+(?:\.\d+)?\b)|(==|!=|>=|<=|&&|\|\|)/g,
+            function (match, comment, varColon, varDollar, cmd, dir, ctrl, strDouble, strSingle, number, operator) {
+                if (comment) return '<span style="color:' + RaidScriptColors.comment + '">' + comment + '</span>';
+                if (varColon) return '<span style="color:' + RaidScriptColors.varColon + '">' + varColon + '</span>';
+                if (varDollar) return '<span style="color:' + RaidScriptColors.varNormal + '">' + varDollar + '</span>';
+                if (cmd) return '<span style="color:' + RaidScriptColors.cmd + '">' + cmd + '</span>';
+                if (dir) return '<span style="color:' + RaidScriptColors.dir + '">' + dir + '</span>';
+                if (ctrl) return '<span style="color:' + RaidScriptColors.ctrl + '">' + ctrl + '</span>';
+                if (strDouble) return '<span style="color:' + RaidScriptColors.str + '">' + strDouble + '</span>';
+                if (strSingle) return '<span style="color:' + RaidScriptColors.str + '">' + strSingle + '</span>';
+                if (number) return '<span style="color:' + RaidScriptColors.number + '">' + number + '</span>';
+                if (operator) return '<span style="color:' + RaidScriptColors.operator + '">' + operator + '</span>';
+                return match;
+            }
+        );
+    }
+
+    /**
+     * Create a syntax-highlighted code editor from a textarea element.
+     * The original textarea is preserved (hidden behind a transparent overlay)
+     * while a pre element shows the highlighted code.
+     * @param {string} textareaId - The ID of the textarea element
+     * @param {object} [options] - Optional height/width overrides
+     */
+    function createRaidEditor(textareaId, options) {
+        var textarea = document.getElementById(textareaId);
+        if (!textarea) return null;
+
+        // Prevent duplicate initialization
+        if (document.getElementById(textareaId + '-editor')) {
+            return document.getElementById(textareaId + '-editor');
+        }
+
+        options = options || {};
+        var height = options.height || '30rem';
+        var width = options.width || 'calc(100% - 4em)';
+
+        // Save original styles in case we need them
+        var origDisplay = textarea.style.display;
+
+        // Create container
+        var container = document.createElement('div');
+        container.id = textareaId + '-editor';
+        container.style.cssText = 'position:relative;height:' + height + ';width:' + width + ';margin:0 2em;text-align:left;';
+
+        // Create highlight pre element (background layer, absolutely positioned)
+        var highlight = document.createElement('pre');
+        highlight.className = 'raid-editor-highlight';
+        highlight.style.cssText = 'position:absolute;top:0;left:0;right:0;bottom:0;margin:0;padding:6px 8px;overflow:auto;font-size:0.8em;font-family:JetBrains Mono,monospace;line-height:1.4;white-space:pre-wrap;word-wrap:break-word;background:#1a1a2e;color:#ccc;pointer-events:none;z-index:1;border:1px solid #555;border-radius:4px;text-align:left;box-sizing:border-box;';
+
+        // Style textarea - use relative positioning to stay in normal flow
+        textarea.style.cssText = 'display:block;width:100%;height:100%;margin:0;padding:6px 8px;font-size:0.8em;font-family:JetBrains Mono,monospace;line-height:1.4;background:transparent;color:transparent;caret-color:#fff;z-index:2;position:relative;border:1px solid #555;border-radius:4px;resize:none;outline:none;overflow:auto;text-align:left;box-sizing:border-box;';
+
+        // Insert container before textarea, then move textarea inside
+        textarea.parentNode.insertBefore(container, textarea);
+        container.appendChild(highlight);
+        container.appendChild(textarea);
+
+        // Sync the highlighted content
+        function syncHighlight() {
+            highlight.innerHTML = highlightRaidSyntax(textarea.value) + '\n';
+        }
+
+        // Sync scroll position
+        function syncScroll() {
+            highlight.scrollTop = textarea.scrollTop;
+            highlight.scrollLeft = textarea.scrollLeft;
+        }
+
+        textarea.addEventListener('input', syncHighlight);
+        textarea.addEventListener('scroll', syncScroll);
+        textarea.addEventListener('focus', syncHighlight);
+        textarea.addEventListener('keydown', function () {
+            setTimeout(syncHighlight, 0);
+        });
+
+        // Initial highlight
+        syncHighlight();
+
+        // Return the highlight element for external use
+        return highlight;
+    }
+
     const UI = {
         showToolbar: function () {
-            if (!UI._toolbarHidden) return;
-            UI._toolbarHidden = false;
             var raidToolbar = `
             <style>
                 .raid-item{
@@ -4217,18 +4327,20 @@ $to 住房-练功房;dazuo
                 }
             </style>
             <div id="raidToolbar">
-                <div class="raidToolbar" style="width:calc(100% - 40px);margin:5px 0 5px 0">
-                    <span class="raid-item hideRaidToolbar" style="width:15px"><hic>&#9660;</span>
+                <div class="raidToolbar" style="width:calc(100% - 10px);margin:5px 0 5px 0">
                     <span class="raid-item forum"><hiy>快捷</hiy></span>
                     <span class="raid-item shortcut"><hiz>功能</hiz></span>
                     <span class="raid-item trigger"><hio>触发</hio></span>
                     <span class="raid-item customFlow" id="workflows-button"><hig>流程</hig></span>
                     <span class="raid-item moreRaid"><hic>副本</hic></span>
                     <span class="raid-item commandLine"><hir>命令</hir></span>
-                    <span class="raid-item zmlztjk"><hir>自命令</hir></span>                    
+                    <span class="raid-item zmlztjk"><hir>自命令</hir></span>
+                    <span class="raid-item itemLog"><hig>获得物品</hig></span>                    
                 </div>
             </div>`
-            $(".WG_log").before(raidToolbar);
+            if ($('#raidToolbar').length === 0) {
+                $(".WG_log").before(raidToolbar);
+            }
             $(".customFlow").on('click', UI.workflows);
             $(".trigger").on('click', UI.trigger);
             $(".forum").on('click', UI.forum);
@@ -4236,54 +4348,7 @@ $to 住房-练功房;dazuo
             $(".moreRaid").on('click', UI.dungeons);
             $(".commandLine").on('click', UI.commandLine);
             $(".zmlztjk").on('click', WG.zmlztjk);
-            $(".hideRaidToolbar").on('click', UI.hideToolbar);
-        },
-        hideToolbar: function () {
-            var toolbar = document.getElementById("raidToolbar");
-            if (toolbar != null) {
-                var items = toolbar.querySelectorAll(".raid-item:not(.hideRaidToolbar)");
-                var isHidden = items.length > 0 && items[0].style.display === "none";
-
-                if (isHidden) {
-                    // Show toolbar items
-                    for (var i = 0; i < items.length; i++) {
-                        items[i].style.display = "inline-block";
-                    }
-                    UI._toolbarHidden = false;
-
-                    // Update button symbol to ▼ (show state)
-                    var buttons = toolbar.querySelectorAll(".hideRaidToolbar");
-                    for (var j = 0; j < buttons.length; j++) {
-                        buttons[j].innerHTML = "<hic>&#9660;";
-                    }
-
-                    // Show WG_log panel
-                    if ($('.WG_log').css('display') == 'none') {
-                        window.localStorage.setItem("closeBorad", "false");
-                        $('.WG_log').show();
-                        $('.WG_log_log').show();
-                    }
-                } else {
-                    // Hide toolbar items
-                    for (var i = 0; i < items.length; i++) {
-                        items[i].style.display = "none";
-                    }
-                    UI._toolbarHidden = true;
-
-                    // Update button symbol to ▲ (hide state)
-                    var buttons = toolbar.querySelectorAll(".hideRaidToolbar");
-                    for (var j = 0; j < buttons.length; j++) {
-                        buttons[j].innerHTML = "<hic>&#9650;";
-                    }
-
-                    // Hide WG_log panel
-                    if ($('.WG_log').css('display') != 'none') {
-                        window.localStorage.setItem("closeBorad", "true");
-                        $('.WG_log').hide();
-                        $('.WG_log_log').hide();
-                    }
-                }
-            }
+            $(".itemLog").on('click', UI.itemLog);
         },
 
         trigger: function () {
@@ -4300,158 +4365,125 @@ $to 住房-练功房;dazuo
             }
         },
         forum: function () {
-            var content = `
-            <span class="zdy-item extension-outMaze" style="width: 120px; height: 30px; line-height: 30px; border-radius: 0.5em;"> 走出桃花林</span>
-            <span class="zdy-item extension-zhoubotong" style="width: 120px; height: 30px; line-height: 30px; border-radius: 0.5em;"> 找到周伯通</span>
-            <span class="zdy-item extension-guzongmen" style="width: 120px; height: 30px; line-height: 30px; border-radius: 0.5em;"> 古宗门寻路</span>
-            <span class="zdy-item extension-cihang" style="width: 120px; height: 30px; line-height: 30px; border-radius: 0.5em;"> 慈航七重门</span>
-            <span class="zdy-item extension-zhanshendian" style="width: 120px; height: 30px; line-height: 30px; border-radius: 0.5em;"> 战神殿解谜 </span>
-            <span class="zdy-item extension-sdyt" style="width: 120px; height: 30px; line-height: 30px; border-radius: 0.5em;"> 扫荡妖塔</span>
-            <span class="zdy-item extension-yjyt" style="width: 120px; height: 30px; line-height: 30px; border-radius: 0.5em;"> 一键妖塔</span>
-            <span class = "zdy-item extension-setting" style="width: 120px; height: 30px; line-height: 30px; border-radius: 0.5em;"> 参数设置 </span>
-            <br><br>
-            `;
+            const forumItems = [
+                { name: "走出桃花林", action: function () { WG.SendCmd('stopstate'); THIsland.outMaze(); } },
+                { name: "找到周伯通", action: function () { WG.SendCmd('stopstate'); THIsland.zhoubotong(); } },
+                { name: "古宗门寻路", action: function () { WG.SendCmd('stopstate'); DungeonsShortcuts.extension_guzongmen(); } },
+                { name: "慈航七重门", action: function () { WG.SendCmd('stopstate'); DungeonsShortcuts.extension_cihang(); } },
+                { name: "战神殿解谜", action: function () { WG.SendCmd('stopstate'); DungeonsShortcuts.extension_zhanshendian(); } },
+                { name: "扫荡妖塔", action: function () { DungeonsShortcuts.extension_sdyt(); } },
+                { name: "一键妖塔", action: function () { DungeonsShortcuts.extension_yjyt(); } },
+                { name: "参数设置", action: function () { if (unsafeWindow.showExtSettings) { unsafeWindow.showExtSettings(); } else { DungeonsShortcuts.extension_setting(); } } }
+            ];
+            const content = `
+            <div id="forum-list-app">
+                <div v-for="item in items">
+                    <div style="height:1px;background-color:rgba(255,255,255,0.25);margin:0 -20px;"></div>
+                    <table style="width:100%;border-collapse:collapse;">
+                        <tr>
+                            <td style="padding:3px 0 3px 0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:left;">{{ item.name }}</td>
+                            <td style="width:80px;text-align:center;">
+                                <span style="display:inline-block;width:66px;height:24px;line-height:24px;text-align:center;border-radius:12px;background-color:rgba(255,255,255,0.18);cursor:pointer;font-size:12px;" v-on:click="item.action()">运行</span>
+                            </td>
+                        </tr>
+                    </table>
+                </div>
+                <div style="height:1px;background-color:rgba(255,255,255,0.25);margin:0 -20px;" v-if="items.length"></div>
+            </div>`;
             UI._appendHtml("🐟 <hiy>快捷扩展</hiy>", content);
-            $(".extension-outMaze").on('click', function () {
-                WG.SendCmd('stopstate');
-                THIsland.outMaze();
-            });
-            $(".extension-zhoubotong").on('click', function () {
-                WG.SendCmd('stopstate');
-                THIsland.zhoubotong();
-            });
-            $(".extension-cihang").on('click', function () {
-                WG.SendCmd('stopstate');
-                DungeonsShortcuts.extension_cihang();
-            });
-            $(".extension-zhanshendian").on('click', function () {
-                WG.SendCmd('stopstate');
-                DungeonsShortcuts.extension_zhanshendian();
-            });
-            $(".extension-guzongmen").on('click', function () {
-                WG.SendCmd('stopstate');
-                DungeonsShortcuts.extension_guzongmen();
-            });
-            $(".extension-sdyt").on("click", function () {
-                DungeonsShortcuts.extension_sdyt();
-            });
-            $(".extension-yjyt").on("click", function () {
-                DungeonsShortcuts.extension_yjyt();
-            });
-            $(".extension-setting").on("click", function () {
-                if (unsafeWindow.showExtSettings) {
-                    unsafeWindow.showExtSettings();
-                } else {
-                    DungeonsShortcuts.extension_setting();
-                }
+            new Vue({
+                el: '#forum-list-app',
+                data: { items: forumItems }
             });
         },
         shortcut: function () {
-            var content = `
-            <span class = "zdy-item toolhtml" style="width: 120px; height: 30px; line-height: 30px; border-radius: 0.5em;"> 工具网页 </span>
-            <span class = "zdy-item guideweb" style="width: 120px; height: 30px; line-height: 30px; border-radius: 0.5em;"> 攻略网站 </span>
-            <span class = "zdy-item zdybtnset" style="width: 120px; height: 30px; line-height: 30px; border-radius: 0.5em;"> 自定义按钮 </span>
-            <span class = "zdy-item cleandata" style="width: 120px; height: 30px; line-height: 30px; border-radius: 0.5em;"> 清空数据 </span>
-            <span class = "zdy-item onekeydelaytest" style="width: 120px; height: 30px; line-height: 30px; border-radius: 0.5em;"> 延迟测试 </span>
-            <span class = "zdy-item dsrw" style="width: 120px; height: 30px; line-height: 30px; border-radius: 0.5em;"> 定时任务 </span>
-            <span class = "zdy-item uploadFlows" style="width: 120px; height: 30px; line-height: 30px; border-radius: 0.5em;"> 分享角色流程 </span>
-            <span class = "zdy-item downloadFlows" style="width: 120px; height: 30px; line-height: 30px; border-radius: 0.5em;"> 拷贝角色流程 </span>
-            <span class = "zdy-item uploadTriggers" style="width: 120px; height: 30px; line-height: 30px; border-radius: 0.5em;"> 分享角色触发 </span>
-            <span class = "zdy-item downloadTriggers" style="width: 120px; height: 30px; line-height: 30px; border-radius: 0.5em;"> 拷贝角色触发 </span>
-            <span class = "zdy-item importFlow" style="width: 120px; height: 30px; line-height: 30px; border-radius: 0.5em;"> 导入流程 </span>
-            <span class = "zdy-item importTrigger" style="width: 120px; height: 30px; line-height: 30px; border-radius: 0.5em;"> 导入触发器 </span>
-            <!--<span class = "zdy-item translateCode" style="width: 120px; height: 30px; line-height: 30px; border-radius: 0.5em;"> 流程转换修复 </span>-->
-            <!--<span class = "zdy-item raidVersion" style="width: 120px; height: 30px; line-height: 30px; border-radius: 0.5em;"> 🏹 ${GM_info.script.version} </span>-->
-            `
+            const shortcutItems = [
+                { name: "工具网页", action: function () { openExtensionHtml(); } },
+                { name: "攻略网站", action: function () { window.open("https://ucn595zz2fou.feishu.cn/wiki/JvEZw8bEiiIpf3kQiFJcAwbanji", "_blank"); } },
+                { name: "自定义按钮", action: function () { WG.zdy_btnset(); } },
+                { name: "清空数据", action: function () { WG.clean_data(); } },
+                { name: "延迟测试", action: function () { WG.wsdelaytest(); } },
+                { name: "定时任务", action: function () { WG.dsj(); } },
+                { name: "分享角色流程", action: function () { Server.uploadFlows(); } },
+                { name: "拷贝角色流程", action: function () {
+                    layer.confirm('拷贝成功将会完全覆盖原有角色流程！', {
+                        title: "<red>! 警告</red>",
+                        btn: ['那还是算了', '好的继续'],
+                        shift: 2,
+                    }, function (index) {
+                        layer.close(index);
+                    }, function () {
+                        layer.prompt({ title: '输入角色流程获取码', formType: 0, shift: 2 }, function (pass, index) {
+                            layer.close(index);
+                            Server.downloadFlows(pass);
+                        });
+                    });
+                } },
+                { name: "分享角色触发", action: function () { Server.uploadTriggers(); } },
+                { name: "拷贝角色触发", action: function () {
+                    layer.confirm('拷贝成功将会完全覆盖原有角色触发器！', {
+                        title: "<red>警告</red>",
+                        btn: ['取消', '确认'],
+                        shift: 2,
+                    }, function (index) {
+                        layer.close(index);
+                    }, function () {
+                        layer.prompt({ title: '输入角色触发获取码', formType: 0, shift: 2 }, function (pass, index) {
+                            layer.close(index);
+                            Server.downloadTriggers(pass);
+                        });
+                    });
+                } },
+                { name: "导入流程", action: function () {
+                    let allFinder = WorkflowConfig.getFinderNames().join("|");
+                    let source = `
+                    #input ($token)=分享码,
+                    #select ($target)=目标文件夹,${allFinder},${WorkflowConfig.rootFinderName}
+                    #config
+                    @js Server.importFlow("(token)", "(target)");
+                    `
+                    const p = new Performer("导入流程", source);
+                    p.log(false);
+                    p.start();
+                } },
+                { name: "导入触发器", action: function () {
+                    let source = `
+                    #input ($token)=分享码,
+                    #config
+                    @js Server.importTrigger("(token)");
+                    `
+                    const p = new Performer("导入触发器", source);
+                    p.log(false);
+                    p.start();
+                } },
+                { name: "流程转换修复", action: function () {
+                    layer.prompt({ title: '客栈->流程讨论，阅读使用说明后操作', formType: 0, shift: 2 }, function (pass, index) {
+                        if (pass == "我确认开始转换") {
+                            layer.close(index);
+                            CodeTranslator.run();
+                        }
+                    });
+                } }
+            ];
+            const content = `
+            <div id="shortcut-list-app">
+                <div v-for="item in items">
+                    <div style="height:1px;background-color:rgba(255,255,255,0.25);margin:0 -20px;"></div>
+                    <table style="width:100%;border-collapse:collapse;">
+                        <tr>
+                            <td style="padding:3px 0 3px 0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:left;">{{ item.name }}</td>
+                            <td style="width:80px;text-align:center;">
+                                <span style="display:inline-block;width:66px;height:24px;line-height:24px;text-align:center;border-radius:12px;background-color:rgba(255,255,255,0.18);cursor:pointer;font-size:12px;" v-on:click="item.action()">运行</span>
+                            </td>
+                        </tr>
+                    </table>
+                </div>
+                <div style="height:1px;background-color:rgba(255,255,255,0.25);margin:0 -20px;" v-if="items.length"></div>
+            </div>`;
             UI._appendHtml("🍯 <hiz>插件功能</hiz>", content);
-            $(".toolhtml").on('click', function () {
-                openExtensionHtml();
-            });
-            $(".guideweb").on('click', function () {
-                window.open("https://ucn595zz2fou.feishu.cn/wiki/JvEZw8bEiiIpf3kQiFJcAwbanji", "_blank");
-            });
-            $(".zdybtnset").on('click', function () {
-                WG.zdy_btnset();
-            });
-            $(".cleandata").on('click', function () {
-                WG.clean_data();
-            });
-            $(".onekeydelaytest").on('click', function () {
-                WG.wsdelaytest();
-            });
-            $(".dsrw").on('click', function () {
-                WG.dsj();
-            });
-            $(".uploadFlows").on('click', _ => {
-                Server.uploadFlows();
-            });
-            $(".downloadFlows").on('click', _ => {
-                layer.confirm('拷贝成功将会完全覆盖原有角色流程！', {
-                    title: "<red>! 警告</red>",
-                    btn: ['那还是算了', '好的继续'],
-                    shift: 2,
-                }, function (index) {
-                    layer.close(index);
-                }, function () {
-                    layer.prompt({ title: '输入角色流程获取码', formType: 0, shift: 2 }, function (pass, index) {
-                        layer.close(index);
-                        Server.downloadFlows(pass);
-                    });
-                });
-            });
-            $(".uploadTriggers").on('click', _ => {
-                Server.uploadTriggers();
-            });
-            $(".downloadTriggers").on('click', _ => {
-                layer.confirm('拷贝成功将会完全覆盖原有角色触发器！', {
-                    title: "<red>警告</red>",
-                    btn: ['取消', '确认'],
-                    shift: 2,
-                }, function (index) {
-                    layer.close(index);
-                }, function () {
-                    layer.prompt({ title: '输入角色触发获取码', formType: 0, shift: 2 }, function (pass, index) {
-                        layer.close(index);
-                        Server.downloadTriggers(pass);
-                    });
-                });
-            });
-
-            $(".importFlow").on('click', _ => {
-                let allFinder = WorkflowConfig.getFinderNames().join("|");
-                let source = `
-                #input ($token)=分享码,
-                #select ($target)=目标文件夹,${allFinder},${WorkflowConfig.rootFinderName}
-                #config
-                @js Server.importFlow("(token)", "(target)");
-                `
-                const p = new Performer("导入流程", source);
-                p.log(false);
-                p.start();
-            });
-
-            $(".importTrigger").on('click', _ => {
-                let source = `
-                #input ($token)=分享码,
-                #config
-                @js Server.importTrigger("(token)");
-                `
-                const p = new Performer("导入触发器", source);
-                p.log(false);
-                p.start();
-            });
-
-            $(".translateCode").on('click', _ => {
-                layer.prompt({ title: '客栈->流程讨论，阅读使用说明后操作', formType: 0, shift: 2 }, function (pass, index) {
-                    if (pass == "我确认开始转换") {
-                        layer.close(index);
-                        CodeTranslator.run();
-                    }
-                });
-            });
-
-            $(".raidVersion").on('click', _ => {
-                Server.getNotice();
+            new Vue({
+                el: '#shortcut-list-app',
+                data: { items: shortcutItems }
             });
         },
         dungeons: function () {
@@ -4486,6 +4518,64 @@ $to 住房-练功房;dazuo
                 } else {
                     WG.SendCmd(text);
                 }
+            });
+        },
+
+        itemLog: function () {
+            if (UI._itemLogTimer) {
+                clearInterval(UI._itemLogTimer);
+            }
+            UI._renderItemLog();
+            UI._itemLogTimer = setInterval(function () {
+                if ($('.WG_log pre').text().indexOf('获得物品') >= 0) {
+                    UI._renderItemLog();
+                } else {
+                    clearInterval(UI._itemLogTimer);
+                    UI._itemLogTimer = null;
+                }
+            }, 2000);
+        },
+        _renderItemLog: function () {
+            var items = raidItemData || {};
+            var keys = Object.keys(items);
+            if (keys.length === 0) {
+                UI._appendHtml("<hig>获得物品</hig>", "<hiy>暂无物品记录</hiy>");
+                return;
+            }
+            function colorizeName(name) {
+                return name.replace(/<(\w+)>(.*?)<\/\1>/g, function (match, tag, text) {
+                    return '<' + tag + '>' + text + '</' + tag + '>';
+                });
+            }
+            var rows = '';
+            for (var i = 0; i < keys.length; i++) {
+                var item = items[keys[i]];
+                rows += '<tr>' +
+                    '<td style="padding:2px 8px;text-align:left">' + colorizeName(item.name) + '</td>' +
+                    '<td style="padding:2px 8px;text-align:right"><hig>' + item.count + '</hig></td>' +
+                    '<td style="padding:2px 8px;text-align:right">' + item.current + '</td>' +
+                    '<td style="padding:2px 8px;text-align:left">' + item.unit + '</td>' +
+                    '</tr>';
+            }
+            var content = '<div style="max-height:60vh;overflow-y:auto">' +
+                '<table style="width:100%;border-collapse:collapse;font-size:0.9em">' +
+                '<thead><tr style="border-bottom:1px solid #555">' +
+                '<th style="padding:4px 8px;text-align:left">物品名</th>' +
+                '<th style="padding:4px 8px;text-align:right">获得数量</th>' +
+                '<th style="padding:4px 8px;text-align:right">当前持有</th>' +
+                '<th style="padding:4px 8px;text-align:left">单位</th>' +
+                '</tr></thead><tbody>' + rows + '</tbody></table></div>' +
+                '<div class="item-commands" style="text-align:center;margin-top:8px">' +
+                '<span class="getitem" style="width:80px">清空</span></div>';
+            UI._appendHtml("<hig>获得物品</hig>", content);
+            $(".getitem").on("click", function () {
+                for (var key in raidItemData) {
+                    delete raidItemData[key];
+                }
+                for (var key in itemTotalCount) {
+                    delete itemTotalCount[key];
+                }
+                UI._renderItemLog();
             });
         },
 
@@ -4609,6 +4699,7 @@ $to 住房-练功房;dazuo
                 }
             };
             UI._showModal("🥗 <hig>新建流程</hig>", content, "<wht>保存</wht>", save, UI._backTitle, function () { UI._closeModal(); UI.workflowsHome(); });
+            setTimeout(function () { createRaidEditor('create-flow-source'); }, 50);
         },
         modifyWorkflow: function (flow) {
             let options = "";
@@ -4648,6 +4739,7 @@ $to 住房-练功房;dazuo
             $("#modify-flow-name").val(flow.name);
             $("#modify-flow-source").val(FlowStore.get(flow.name));
             $("#modify-flow-finder").val(flow.finder);
+            setTimeout(function () { createRaidEditor('modify-flow-source'); }, 50);
             $(".shareFlow").on('click', function () {
                 const data = {
                     name: $("#modify-flow-name").val(),
@@ -4657,7 +4749,6 @@ $to 住房-练功房;dazuo
             });
         },
 
-        _toolbarHidden: true,
         _backTitle: "<wht>< 返回</wht>",
         _backSaveTitle: "<wht>< 保存&返回</wht>",
 
@@ -4723,199 +4814,117 @@ $to 住房-练功房;dazuo
         _workflowContentModel: function (items) {
             return new Vue({
                 el: '#WorkflowsContentModel',
-                methods: {
-                    createSpan: function (createElement, item) {
-                        let style = {
-                            width: "120px",
-                            "background-color": "#12e4a0",
-                            border: "solid 1px rgb(107, 255, 70)",
-                            "border-radius": "0.5em",
-                            color: "#000dd4",
-                            padding: "10px 10px"
-                        };
-                        if (item.type == "finder") {
-                            style = {
-                                width: "120px",
-                                "background-color": "#0359c3",
-                                border: "solid 1px rgb(107, 203, 255)",
-                                "border-radius": "0.5em",
-                                color: "white",
-                                padding: "10px 10px"
-                            };
-                        }
-                        const properties = {
-                            attrs: {class: "zdy-item"},
-                            style: style
-                        };
-                        const play = function () {
-                            if (item.type == "finder") {
-                                UI.openFinder(item.name);
-                            } else {
-                                ManagedPerformerCenter.start(item.name, FlowStore.get(item.name));
-                            }
-                        };
-                        const edit = function () {
-                            if (item.type == "finder") {
-                                UI.modifyFinder(item);
-                            } else {
-                                UI.modifyWorkflow(item);
-                            }
-                        };
-                        const leftProperties = {
-                            style: {
-                                width: "30px",
-                                float: "left",
-                                "background-color": "#ffffff4f",
-                                "border-radius": "4px"
-                            },
-                            on: {click: edit}
-                        };
-                        const leftNode = createElement("div", leftProperties, "⚙");
-                        const mainProperties = {
-                            attrs: {class: "breakText"},
-                            style: {width: "85px", float: "right"},
-                            on: {click: play}
-                        };
-                        const title = item.type == "finder" ? item.name : `▶️${item.name}`;
-                        const mainNode = createElement("div", mainProperties, title);
-                        return createElement("span", properties, [leftNode, mainNode]);
-                    },
+                template: `
+                <div id="workflows-list-app">
+                    <div v-for="item in items">
+                        <div style="height:1px;background-color:rgba(255,255,255,0.25);margin:0 -20px;"></div>
+                        <table style="width:100%;border-collapse:collapse;">
+                            <tr>
+                                <td style="padding:3px 0 3px 0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:left;">
+                                    <span v-if="item.type=='finder'">{{ item.name }}</span>
+                                    <span v-else>▶️{{ item.name }}</span>
+                                </td>
+                                <td style="width:80px;text-align:center;">
+                                    <span style="display:inline-block;width:66px;height:24px;line-height:24px;text-align:center;border-radius:12px;background-color:rgba(255,255,255,0.18);cursor:pointer;font-size:12px;" v-on:click="run(item)">运行</span>
+                                </td>
+                                <td style="width:80px;text-align:center;">
+                                    <span style="display:inline-block;width:66px;height:24px;line-height:24px;text-align:center;border-radius:12px;background-color:rgba(255,255,0,0.15);cursor:pointer;font-size:12px;" v-on:click="edit(item)">设置</span>
+                                </td>
+                            </tr>
+                        </table>
+                    </div>
+                    <div style="height:1px;background-color:rgba(255,255,255,0.25);margin:0 -20px;" v-if="items.length"></div>
+                </div>`,
+                data: function () {
+                    return { items: items };
                 },
-                render: function (createElement) {
-                    var self = this;
-                    let flows = [];
-                    let finders = [];
-                    items.forEach(item => {
-                        if (item.type == "finder") finders.push(self.createSpan(createElement, item));
-                        if (item.type == "flow") flows.push(self.createSpan(createElement, item));
-                    });
-                    let nodes = [];
-                    if (flows.length > 0) nodes.push(flows);
-                    if (finders.length > 0) {
-                        nodes.push(createElement("hr", {
-                            style: {
-                                "background-color": "gray",
-                                height: "1px",
-                                width: "calc(100% - 4em)",
-                                border: "none"
-                            }
-                        }));
-                        nodes.push(finders);
+                methods: {
+                    run: function (item) {
+                        if (item.type == "finder") {
+                            UI.openFinder(item.name);
+                        } else {
+                            ManagedPerformerCenter.start(item.name, FlowStore.get(item.name));
+                        }
+                    },
+                    edit: function (item) {
+                        if (item.type == "finder") {
+                            UI.modifyFinder(item);
+                        } else {
+                            UI.modifyWorkflow(item);
+                        }
                     }
-                    const style = createElement("style", ".breakText {word-break:keep-all;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}");
-                    nodes.push(style);
-                    return createElement(
-                        "div",
-                        {attrs: {class: "item-commands"}},
-                        nodes
-                    );
                 }
             });
         },
         _dungeonsContentModel: function () {
             return new Vue({
                 el: '#DungeonsContentModel',
-                methods: {
-                    getItems: function () {
-                        return Dungeons;
-                    },
-                    createSpan: function (createElement, item) {
-                        var properties = {
-                            attrs: {class: "zdy-item"},
-                            style: {
-                                width: "120px",
-                                height: "30px",
-                                "line-height": "30px",
-                                "border-radius": "0.5em"
-                            },
-                            on: {
-                                click: function () {
-                                    ManagedPerformerCenter.start(`自动副本-${item.name}`, GetDungeonSource(item.name));
-                                }
-                            },
-                        };
-                        return createElement('span', properties, item.desc != null ? item.desc : item.name);
-                    },
+                template: `
+                <div id="dungeons-list-app">
+                    <div v-for="item in items">
+                        <div style="height:1px;background-color:rgba(255,255,255,0.25);margin:0 -20px;"></div>
+                        <table style="width:100%;border-collapse:collapse;">
+                            <tr>
+                                <td style="padding:3px 0 3px 0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:left;">{{ item.desc || item.name }}</td>
+                                <td style="width:80px;text-align:center;">
+                                    <span style="display:inline-block;width:66px;height:24px;line-height:24px;text-align:center;border-radius:12px;background-color:rgba(255,255,255,0.18);cursor:pointer;font-size:12px;" v-on:click="run(item)">运行</span>
+                                </td>
+                            </tr>
+                        </table>
+                    </div>
+                    <div style="height:1px;background-color:rgba(255,255,255,0.25);margin:0 -20px;" v-if="items.length"></div>
+                </div>`,
+                data: function () {
+                    return { items: Dungeons };
                 },
-                render: function (createElement) {
-                    var items = this.getItems();
-                    var theSelf = this;
-                    var spans = items.map(function (item) {
-                        return theSelf.createSpan(createElement, item);
-                    });
-                    return createElement(
-                        "div",
-                        {attrs: {class: "item-commands"}},
-                        spans
-                    );
+                methods: {
+                    run: function (item) {
+                        ManagedPerformerCenter.start(`自动副本-${item.name}`, GetDungeonSource(item.name));
+                    }
                 }
             });
         },
         _runningFlowsContentModel: function () {
             return new Vue({
                 el: '#WorkflowsContentModel',
-                methods: {
-                    createSpan: function (createElement, flow) {
-                        let style = {
-                            width: "120px",
-                            "background-color": "#05b77d",
-                            border: "solid 1px rgb(107, 255, 70)",
-                            "border-radius": "0.5em",
-                            color: "white",
-                            padding: "10px 10px"
-                        };
-                        var properties = {
-                            attrs: {class: "zdy-item"},
-                            style: style
-                        };
-                        var stop = function () {
-                            flow.stop();
-                        };
-                        var pause = function () {
-                            if (flow.pausing()) {
-                                flow.resume();
-                            } else {
-                                flow.pause();
-                            }
-                            UI.runningFlows();
-                            if (flow.pausing()) {
-                                Message.append(`<hiy>暂停执行，流程: ${flow.name()}...</hiy>`);
-                            } else {
-                                Message.append(`<hiy>恢复执行，流程: ${flow.name()}。</hiy>`);
-                            }
-                        };
-                        const leftProperties = {
-                            style: {
-                                width: "30px",
-                                float: "left",
-                                "background-color": "#ffffff4f",
-                                "border-radius": "4px"
-                            },
-                            on: {click: pause}
-                        };
-                        var leftNode = createElement("div", leftProperties, flow.pausing() ? "▶️" : "⏸");
-                        var mainProperties = {
-                            attrs: {class: "breakText"},
-                            style: {width: "85px", float: "right"},
-                            on: {click: stop}
-                        };
-                        const mainNode = createElement("div", mainProperties, `⏹${flow.name()}`);
-                        return createElement("span", properties, [leftNode, mainNode]);
-                    },
+                template: `
+                <div id="running-flows-list-app">
+                    <div v-for="flow in items">
+                        <div style="height:1px;background-color:rgba(255,255,255,0.25);margin:0 -20px;"></div>
+                        <table style="width:100%;border-collapse:collapse;">
+                            <tr>
+                                <td style="padding:3px 0 3px 0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:left;">{{ flow.name() }}</td>
+                                <td style="width:80px;text-align:center;">
+                                    <span style="display:inline-block;width:66px;height:24px;line-height:24px;text-align:center;border-radius:12px;background-color:rgba(255,255,255,0.18);cursor:pointer;font-size:12px;" v-on:click="toggle(flow)">{{ flow.pausing() ? '▶️恢复' : '⏸暂停' }}</span>
+                                </td>
+                                <td style="width:80px;text-align:center;">
+                                    <span style="display:inline-block;width:66px;height:24px;line-height:24px;text-align:center;border-radius:12px;background-color:rgba(255,0,0,0.15);cursor:pointer;font-size:12px;" v-on:click="stop(flow)">⏹停止</span>
+                                </td>
+                            </tr>
+                        </table>
+                    </div>
+                    <div style="height:1px;background-color:rgba(255,255,255,0.25);margin:0 -20px;" v-if="items.length"></div>
+                </div>`,
+                data: function () {
+                    return { items: ManagedPerformerCenter.getAll() };
                 },
-                render: function (createElement) {
-                    var items = ManagedPerformerCenter.getAll();
-                    var theSelf = this;
-                    var spans = items.map(function (item) {
-                        return theSelf.createSpan(createElement, item);
-                    });
-                    const style = createElement("style", ".breakText {word-break:keep-all;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}");
-                    spans.push(style);
-                    return createElement(
-                        "div",
-                        {attrs: {class: "item-commands"}},
-                        spans
-                    );
+                methods: {
+                    toggle: function (flow) {
+                        if (flow.pausing()) {
+                            flow.resume();
+                        } else {
+                            flow.pause();
+                        }
+                        UI.runningFlows();
+                        if (flow.pausing()) {
+                            Message.append(`<hiy>暂停执行，流程: ${flow.name()}...</hiy>`);
+                        } else {
+                            Message.append(`<hiy>恢复执行，流程: ${flow.name()}。</hiy>`);
+                        }
+                    },
+                    stop: function (flow) {
+                        flow.stop();
+                    }
                 }
             });
         },
@@ -6573,6 +6582,8 @@ look men;open men
 
         unsafeWindow.ToRaid = ToRaid;
         unsafeWindow.Role = Role;
+        unsafeWindow.createRaidEditor = createRaidEditor;
+        unsafeWindow.highlightRaidSyntax = highlightRaidSyntax;
 
         Role.init();
         Room.init();

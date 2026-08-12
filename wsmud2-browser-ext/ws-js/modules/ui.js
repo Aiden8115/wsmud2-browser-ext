@@ -18,12 +18,12 @@ var UI = {
             i = i + 1;
         }
         return ui + `<span class="zdy-item auto_perform" style="float:right;"> 自动攻击 </span>
-            <span class="zdy-item cmd_echo" style="float:right;">代码</span> </div>`;
+            <span class="zdy-item cmd_echo" style="float:right;">命令代码</span> </div>`;
     },
     btnui: function () {
         return `<div class='WG_button'>
         <span class="zdy-item auto_perform" style="float:right;"> 自动攻击 </span>
-            <span class="zdy-item cmd_echo" style="float:right;">代码</span> </div>`
+            <span class="zdy-item cmd_echo" style="float:right;">命令代码</span> </div>`
     },
     wgui: function () {
         let p;
@@ -143,7 +143,31 @@ var UI = {
             + `<h3>显示配置</h3>`
             + UI.html_switch('busyinfo', '显示昏迷信息：', 'busy_info')
             + UI.html_switch('skillCD', '显示技能CD：', 'skillCD')
+            + `
+            <div class="setting-item" >
+            <span> <label for="skillCDColor"> 技能CD颜色： </label><select id="skillCDColor" style="width:80px">
+                <option value="hir"> 红色 </option>
+                <option value="hig"> 绿色 </option>
+                <option value="hiy"> 黄色 </option>
+                <option value="hic"> 青色 </option>
+                <option value="hiz"> 蓝色 </option>
+                <option value="hio"> 橙色 </option>
+                <option value="wht"> 白色 </option>
+            </select>
+            </span></div> `
             + UI.html_switch('buffCD', '显示BuffCD：', 'buffCD')
+            + `
+            <div class="setting-item" >
+            <span> <label for="buffCDColor"> BuffCD颜色： </label><select id="buffCDColor" style="width:80px">
+                <option value="hir"> 红色 </option>
+                <option value="hig"> 绿色 </option>
+                <option value="hiy"> 黄色 </option>
+                <option value="hic"> 青色 </option>
+                <option value="hiz"> 蓝色 </option>
+                <option value="hio"> 橙色 </option>
+                <option value="wht"> 白色 </option>
+            </select>
+            </span></div> `
             + UI.html_switch('getitemShow', '显示获得物品：', 'getitemShow')
             + `
             <div class="setting-item" >
@@ -153,13 +177,13 @@ var UI = {
             </select>
             </span></div> `
 
-           
+
             + `<h3>自动BOSS、喜宴配置</h3>`
             + UI.html_switch('marry_kiss', '自动喜宴：', "automarry")
             + UI.html_switch('autoBoss', '自动领取boss', "autoBoss")
             + UI.html_lninput("BossName", "输入自动领取的boss名称")
             + UI.html_lninput("auto_command", "输入喜宴、boss后命令(留空为自动挖矿或修炼)：", "95%")
-        
+
             + `<h3>自动施法配置</h3>`
             + UI.html_switch('autopfmswitch', '自动施法开关：', 'auto_pfmswitch')
             + UI.html_switch('autopfmmode', 'AI施法模式：', 'auto_pfm_mode')
@@ -173,7 +197,7 @@ var UI = {
             + UI.html_switch('fj_follower', '启用随从分解', "follower_fenjie")
             + UI.html_lninput('fj_sc', '分解随从名')
             + UI.html_input("fjList", "输入自动分解的装备名字和级别(如'千斤拳2'，无名字或级别会全匹配，用半角逗号分隔)","95%")
-            
+
             + `<h3>杂项配置</h3>`
             + UI.html_lninput("die_str", "死亡提示： ")
             + UI.html_lninput("custom_dock", "抬高高度（px）： ")
@@ -206,7 +230,7 @@ var UI = {
             </select>
             </span></div> `
             + UI.html_lninput("pushToken", "推送方式对应的Token或Key(只要Key不要填整个网址)：")
-        //+ UI.html_lninput("pushUrl", "推演方式对应的推送网址(末尾不要加斜杠/)：")
+            //+ UI.html_lninput("pushUrl", "推演方式对应的推送网址(末尾不要加斜杠/)：")
 
             + `<h3>技能自定义</h3>`
             + UI.html_switch('zdyskillsswitch', '自定义技能顺序开关：', 'zdyskills')
@@ -215,10 +239,14 @@ var UI = {
             + ` <div class="setting-item" ><div class="item-commands"><span class="clear_skillJson">清空技能json数组</span></div></div>`
             + `<h3>自定义按钮</h3>`
             + UI.zdyBtnsetui() +
-            ` <h3>系统</h3> `
+            ` <h3>系统</h3>
+            <div class="item-commands">
+                <span class="backup_btn">上传配置</span>
+                <span class="load_btn">下载配置</span>
+                <span class="reset_default_btn" style="border-color:#e74c3c;color:#e74c3c;">恢复默认设置</span>
+            </div>
+            <div class="setting-item" style="color:#888;font-size:12px;">上传/下载配置用于跨角色同步（含游戏自带拓展设置），恢复默认仅重置当前角色设置</div>`
     },
-
-
     zmlsetting: `<div class='zdy_dialog' style='text-align:right;width:280px' id="zmldialog">
 <div class="setting-item"><span><label for="zml_name"> 输入自定义命令名称:</label></span><span><input id="zml_name"
             style='width:80px' type="text" name="zml_name" value="" v-model="singnalzml.name"></span></div>
@@ -248,10 +276,6 @@ var UI = {
     <br />
 </div>
 </div> `,
-
-
-
-
     zmlandztjkui: `<div class='zdy_dialog' style='text-align:right;width:280px' id="zmlandztjk">
  <div class="item-commands"> <span class="editzml" @click="zml"> 编辑自命令 </span> </div>
  <div class="item-commands"> <span class="editztjk" @click="ztjk"> 编辑自定义监控 </span>
@@ -278,7 +302,8 @@ var UI = {
         class="ztjk_editdel"> 删除 </span></div>
 <div class="item-commands" id="ztjk_show"></div>
 <div class="item-commands" id="ztjk_set"></div>
-</div> `,
+</div> 
+        `,
     timeoutui: `<div class='zdy_dialog' style='text-align:right;width:280px'> 注意,可以留空的时或者分,这样就是每分钟/小时 的x秒触发任务,秒为必填项目 <div class="setting-item">    <span>任务名:<input type="text" id="questname" placeholder="任务名" style="width:50%"></span></div> <div class="setting-item">     <label for = "rtype"> 运行次数 </label><select style='width:80px' id="rtype"></div> <option value="1">一次</option> <option value="2">每天</option> </select></span></div> <div class="setting-item">  <span>时:<input type="number" id="ht" placeholder="时" style="width:50%"></span></div> <div class="setting-item">   <span>分:<input type="number" id="mt" placeholder="分" style="width:50%"></span></div> <div class="setting-item">  <span>秒:<input type="number" id="st" placeholder="秒" style="width:50%"></span></div> <div class="setting-item">  <span><label for="zml_info"> 输入自定义命令(用半角分号(;)分隔):</label></span></div> <div class="setting-item">   <textarea class = "settingbox hide zdy-box"style = "display: inline-block;"id = 'zml_info'></textarea></div> <div class = "item-commands"> <span class = "startQuest"> 开始 </span><span class = "removeQuest"> 删除 </span>  </div> <div class='questlist item-commands'></div> </div>`,
     toui: [
         `<div class='item-commands'>
@@ -334,8 +359,9 @@ var UI = {
     jinglianui: function (id) {
         return `<div id="fastjinglian" style="display: flex; flex-direction: column; line-height: normal;"><div style="display: flex; align-items: center; gap: 4px;"><div id="jinglian-slider" style="flex: 1; min-width: 0; height: 32px; display: flex; align-items: center; position: relative;"><input type="range" min="0" max="12" step="1" value="0" id="jinglian-slider-input" style="width: 100%; height: 8px; outline: none;"></div><div id="jinglian-slider-number" style="min-width: 2.5em; text-align: center; font-weight: bold;color: #FF4500"></div></div><div style="display: flex; justify-content: space-between; align-items: center; padding: 0px 4px; margin: 0; flex-wrap: wrap;"><div style="display: flex; align-items: center; gap: 4px"><span>⟶</span><span class="item-commands"><span id="jinglian-preview"></span></span></div><div style="flex: 0 0 auto; line-height: 0;"><span id="jinglian-cost" style="font-size: 14px;;"></span><span style="font-size: 14px;color: #00FF00">&nbsp;玄晶</span></div></div></div><div class="item-commands" style="padding: 4px 16px;"><span cmd="unjinglian ${id}" style="color: #00FFFF">取消精炼</span></div>`;
     },
-
 }
+
+
 function fastjinglian (jlname, jlid) {
     // 匹配颜色
     let colormatch = jlname.match(/^<([^>]+)>/);

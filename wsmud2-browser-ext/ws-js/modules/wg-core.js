@@ -230,7 +230,7 @@ Object.assign(WG, {
               }
               .WG_log{
                 flex: 1;
-                overflow-y: auto;
+                overflow: auto;
                 border: 1px solid #404040;
                 max-height: 10em;
                 width: calc(100% - 10px);
@@ -238,11 +238,12 @@ Object.assign(WG, {
               }
               .WG_log > pre {
                 margin: 0px;
-                white-space: pre-line;
+                white-space: pre !important;
+                overflow: auto !important;
               }
               .WG_log_log {
                 flex: 1;
-                overflow-y: auto;
+                overflow: auto;
                 border: 1px solid #303030;
                 max-height: 25em;
                 width: calc(100% - 10px);
@@ -262,9 +263,9 @@ Object.assign(WG, {
               }
               .WG_log_log > pre {
               margin: 0px;
-              white-space: pre-line;
+              white-space: pre !important;
               flex: 1;
-              overflow-y: auto;
+              overflow: auto !important;
               padding: 4px 10px;
               font-family: 'JetBrains Mono', monospace;
               font-size: 12px;

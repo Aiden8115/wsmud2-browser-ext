@@ -1305,7 +1305,7 @@
                     </span>
                 </div>
                 <div style="float:right;width:calc(100% - 125px)">
-                    <textarea class = "settingbox hide" style = "height:30rem;display:inline-block;font-size:0.8em;width:100%;font-family:'JetBrains Mono',monospace;" v-model="source"></textarea>
+                    <textarea id = "trigger-source-editor" class = "settingbox hide" style = "height:30rem;display:inline-block;font-size:0.8em;width:100%;font-family:'JetBrains Mono',monospace;" v-model="source"></textarea>
                     <span class="raid-item shareTrigger" v-if="canShared" v-on:click="share()">分享此触发器</span>
                 </div>
             </div>
@@ -1374,7 +1374,12 @@
                         ToRaid.shareTrigger(TriggerCenter._getData(trigger.name));
                     }
                 }
-            })
+            });
+            Vue.nextTick(function () {
+                if (unsafeWindow.createRaidEditor) {
+                    unsafeWindow.createRaidEditor('trigger-source-editor');
+                }
+            });
         },
 
         _appendHtml: function (title, content, rightText, leftText) {

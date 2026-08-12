@@ -2,6 +2,55 @@
 // WG misc: custom buttons, settings, login HTML
 'use strict';
 
+// 中文数字转整数
+function chineseNumToInt(cn) {
+    var numMap = { '零': 0, '一': 1, '二': 2, '三': 3, '四': 4, '五': 5, '六': 6, '七': 7, '八': 8, '九': 9 };
+    var unitMap = { '十': 10, '百': 100, '千': 1000, '万': 10000 };
+    var result = 0, current = 0;
+    for (var i = 0; i < cn.length; i++) {
+        var char = cn[i];
+        if (unitMap[char] !== undefined) {
+            if (current === 0) current = 1;
+            result += current * unitMap[char];
+            current = 0;
+        } else if (numMap[char] !== undefined) {
+            if (i + 1 < cn.length && unitMap[cn[i + 1]] !== undefined) {
+                current = numMap[char];
+            } else {
+                result += numMap[char];
+            }
+        }
+    }
+    return result + current;
+}
+// 整数转中文数字
+function intToChineseNum(n) {
+    var cn = ['零','一','二','三','四','五','六','七','八','九'];
+    var units = ['', '十', '百', '千', '万'];
+    if (n === 0) return '零';
+    var numStr = String(n);
+    var result = '';
+    var len = numStr.length;
+    var lastWasZero = false;
+    var hasNonZero = false;
+    for (var i = 0; i < len; i++) {
+        var digit = parseInt(numStr[i]);
+        var pos = len - 1 - i;
+        if (digit === 0) {
+            if (hasNonZero) lastWasZero = true;
+        } else {
+            if (lastWasZero) { result += '零'; lastWasZero = false; }
+            if (pos === 1 && digit === 1 && !hasNonZero) {
+                result += '十';
+            } else {
+                result += cn[digit] + (pos > 0 ? units[pos] : '');
+            }
+            hasNonZero = true;
+        }
+    }
+    return result;
+}
+
 Object.assign(WG, {
       zdybtnfunc: function (type) {
           WG.SendCmd(zdy_btnlist[type].send);
@@ -64,7 +113,7 @@ Object.assign(WG, {
               inzdy_btn = true;
               var html = UI.zdybtnui();
               $('.WG_button').remove();
-              $(".WG_log").after(html);
+              $(".content-message").after(html);
               let keyitem = ["Q", "W", "E", "R", "T", "Y"];
 
               for (let i = 0; i < keyitem.length; i++) {
@@ -76,11 +125,9 @@ Object.assign(WG, {
               $(".cmd_echo").on("click", WG.cmd_echo_button);
           } else if (type == 'off') {
               inzdy_btn = false;
-
               var html = UI.btnui();
               $('.WG_button').remove();
-
-              $(".WG_log").after(html);
+              $(".content-message").after(html);
 
               $(".go_wumiao").on("click", WG.go_wumiao);
               $(".go_home").on("click", WG.go_home);
@@ -89,6 +136,13 @@ Object.assign(WG, {
               if (GameState.score.isGod) {
                   $('.zdy-item.zdwk').html("修炼(Y)");
               }
+          }
+
+          // 初始化命令代码按钮文本
+          if (cmd_echo) {
+              $(".cmd_echo").html('<hig>命令代码：显示</hig>');
+          } else {
+              $(".cmd_echo").html('<hir>命令代码：隐藏</hir>');
           }
 
           GM_setValue(roleid + "_inzdy_btn", inzdy_btn);
@@ -364,12 +418,142 @@ Object.assign(WG, {
                   }
               }
           }
+          // 直接处理events数据
+          if (data.type == 'dialog' && data.dialog == 'events' && data.items && Array.isArray(data.items)) {
+              GameState.events = data.items;
+              // 输出当前活动列表
+              let eventNames = data.items.map(item => item[1]).filter(Boolean);
+              if (eventNames.length > 0) {
+                  messageAppend(`<hic>当前活动：${eventNames.join('、')}</hic>`);
+              } else {
+                  messageAppend(`<hic>当前活动：无</hic>`);
+              }
+              // 检测喜宴和BOSS活动
+              for (let n = 0; n < data.items.length; n++) {
+                  if (data.items[n] && data.items[n][0] === "marry") {
+                      var automarry = GM_getValue(roleid + "_automarry", automarry);
+                      if ((automarry == "开" || automarry === true || automarry === 'true') && GameState.fight.in_fight == false) {
+                          if (stopauto || WG.at('副本')) {
+                              messageAppend("<hiy>已自动领取喜宴</hiy>");
+                              WG.xiyan();
+                          } else {
+                              WG.xiyan();
+                          }
+                      } else if ((automarry == "关" || automarry === false || automarry === 'false') || GameState.fight.in_fight == true) {
+                          let b = "<div class=\"item-commands\"><span id = 'onekeyjh'>参加喜宴</span></div>"
+                          messageAppend("<hiy>点击参加喜宴</hiy>");
+                          messageAppend(b);
+                          $('#onekeyjh').on('click', function () {
+                              WG.xiyan();
+                          });
+                      }
+                  } else if (data.items[n] && data.items[n][0].includes("boss")) {
+                      var boss_name = data.items[n][2].match(/(.*?)被击败了/)?.[1];
+                      BossName = GM_getValue(roleid + "_BossName", BossName);
+                      autoBoss = GM_getValue(roleid + "_autoBoss", autoBoss);
+                      if (boss_name == null || BossName == '') {
+                          continue;
+                      }
+                      if (boss_name && boss_name.includes("<hi")) {
+                          boss_name = boss_name.match(/<hi([^>]+)>(.*?)<\/hi\1>/)[2]
+                      }
+                      if (boss_name != BossName) {
+                          continue;
+                      }
+                      if ((autoBoss == "开" || autoBoss === true || autoBoss === 'true') && GameState.fight.in_fight == false) {
+                          if (stopauto || WG.at('副本')) {
+                              let b = "<div class=\"item-commands\"><span  id = 'onekeyboss'>领取BOSS</span></div>"
+                              messageClear();
+                              messageAppend("<hiy>自动领取boss</hiy>");
+                              messageAppend(b);
+                              $('#onekeyboss').on('click', function () {
+                                  WG.collBoss(data.items[n]);
+                              });
+                          } else {
+                              WG.collBoss(data.items[n]);
+                          }
+                      } else if (GameState.fight.in_fight == true) {
+                          let b = "<div class=\"item-commands\"><span  id = 'onekeyboss'>领取BOSS</span></div>"
+                          messageClear();
+                          messageAppend("<hiy>点击参加领取BOSS,由于未开启自动领取,或者在战斗中,需要手动领取</hiy>");
+                          messageAppend(b);
+                          $('#onekeyboss').on('click', function () {
+                              WG.collBoss(data.items[n]);
+                          });
+                      }
+                  }
+              }
+          }
+
           WG.run_hook(data.type, data);
+
+          // 合并"你获得了"物品消息（扫荡副本时会有大量重复提示）
+          if (data.type == 'text' && typeof data.msg == 'string' &&
+              data.msg.indexOf('你获得了') === 0 &&
+              data.msg.indexOf('点经验') === -1 &&
+              data.msg.indexOf('点潜能') === -1) {
+              var itemName = data.msg.replace(/^你获得了/, '').replace(/[。，,.\s]/g, '').trim();
+              if (itemName) {
+                  if (!window._obtainedItems) {
+                      window._obtainedItems = [];
+                      window._obtainedMoney = { gold: 0, silver: 0, copper: 0 };
+                  }
+                  // 检测是否为金钱物品（先剥离颜色标签）
+                  var cleanName = itemName.replace(/<[^>]+>/g, '');
+                  var moneyAmount = null, moneyType = null;
+                  var goldMatch = cleanName.match(/^(.+?)两黄金$/);
+                  var silverMatch = cleanName.match(/^(.+?)两银子$/);
+                  var copperMatch = cleanName.match(/^(.+?)文铜板$/) || cleanName.match(/^(.+?)铜板$/);
+                  if (goldMatch) { moneyAmount = chineseNumToInt(goldMatch[1]); moneyType = 'gold'; }
+                  else if (silverMatch) { moneyAmount = chineseNumToInt(silverMatch[1]); moneyType = 'silver'; }
+                  else if (copperMatch) { moneyAmount = chineseNumToInt(copperMatch[1]); moneyType = 'copper'; }
+
+                  if (moneyType) {
+                      window._obtainedMoney[moneyType] += moneyAmount;
+                  } else {
+                      window._obtainedItems.push(itemName);
+                  }
+                  clearTimeout(window._obtainedTimer);
+                  window._obtainedTimer = setTimeout(function() {
+                      var parts = [];
+                      // 先加入非金钱物品
+                      if (window._obtainedItems && window._obtainedItems.length > 0) {
+                          parts = window._obtainedItems.slice();
+                      }
+                      // 换算金钱：100铜板=1两银子，100两银子=1两黄金
+                      var money = window._obtainedMoney;
+                      if (money.copper >= 100) {
+                          money.silver += Math.floor(money.copper / 100);
+                          money.copper = money.copper % 100;
+                      }
+                      if (money.silver >= 100) {
+                          money.gold += Math.floor(money.silver / 100);
+                          money.silver = money.silver % 100;
+                      }
+                      // 将换算后的金钱追加到末尾
+                      if (money.gold > 0) parts.push(intToChineseNum(money.gold) + '两黄金');
+                      if (money.silver > 0) parts.push(intToChineseNum(money.silver) + '两银子');
+                      if (money.copper > 0) parts.push(intToChineseNum(money.copper) + '文铜板');
+
+                      if (parts.length > 0) {
+                          var merged = '你获得了' + parts.join('、') + '。';
+                          messageAppend('<hiw>' + merged + '</hiw>', 1);
+                      }
+                      window._obtainedItems = [];
+                      window._obtainedMoney = { gold: 0, silver: 0, copper: 0 };
+                  }, 500);
+              }
+              // 跳过原始消息显示，但保留 funny API
+              if (unsafeWindow.funny && unsafeWindow.funny.API) {
+                  unsafeWindow.funny.API.onmessage(msg);
+              }
+              return;
+          }
+
           ws_on_message.apply(this, arguments);
 
           if (unsafeWindow.funny) {
               if (unsafeWindow.funny.API != null) { unsafeWindow.funny.API.onmessage(msg); }
           }
       },
-
 });

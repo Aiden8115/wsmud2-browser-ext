@@ -171,6 +171,15 @@ var GlobalInit = {
                     GameState.packs.items = data.items;
                     GameState.packs.max_item_count = data.max_item_count;
                     GameState.packs.money = data.money;
+                    // 自动购买商店物品（每日一次，财产>100时触发）
+                    if (data.money > 100) {
+                        var today = new Date(), todayStr = today.getFullYear() + '-' + (today.getMonth() + 1) + '-' + today.getDate();
+                        if (GM_getValue(roleid + "_auto_shop_date", "") !== todayStr) {
+                            GM_setValue(roleid + "_auto_shop_date", todayStr);
+                            WG.SendCmd('shop hd9f10f2a2e70 50');
+                            WG.SendCmd('shop w62l10f2a2e70 10');
+                        }
+                    }
                     GameState.packs.eqs = data.eqs;
                     GameState.packs.eq_group = data.eq_group;
 
@@ -238,18 +247,20 @@ var GlobalInit = {
                         if (!data.name.includes("<wht>")) {
                             let count = index == -1 ? data.count : data.count - old_count;
                             let id = data.id;
-                            let str;
                             if (data.can_eq == 1) {
                                 if (index != -1) return;
-                                str = `获得1${data.unit}${data.name}`;
                             }
                             if (!itemTotalCount[id]) {
                                 itemTotalCount[id] = 0;
                             } else if (itemTotalCount[id] < 0) return;
-
                             itemTotalCount[id] += count;
-                            str = `获得<hiw>${itemTotalCount[id]}</hiw>${data.unit}${data.name}，共有<hiw>${data.count}</hiw>${data.unit}`;
-                            messageAppend(str, 0, id)
+
+                            raidItemData[id] = {
+                                name: data.name,
+                                unit: data.unit,
+                                count: itemTotalCount[id],
+                                current: data.count
+                            };
                         }
                     }
                     if (data.can_use || data.can_open) {
@@ -359,69 +370,6 @@ var GlobalInit = {
                 } else if (data.dialog == 'jh') {
                     if (data.fbs) {
                         fb_path = data.fbs;
-                    }
-                } else if (data.dialog == "events") {
-                    if (data.update || data.finish) {
-                        WG.SendCmd("events")
-                    } else if (data.items && Array.isArray(data.items)) {
-                        GameState.events = data.items;
-                        // 检测喜宴和BOSS活动
-                        for (let n = 0; n < data.items.length; n++) {
-                            if (data.items[n] && data.items[n][0] === "marry") {
-                                var automarry = GM_getValue(roleid + "_automarry", automarry);
-                                if ((automarry == "开" || automarry === true || automarry === 'true') && GameState.fight.in_fight == false) {
-                                    if (stopauto || WG.at('副本')) {
-                                        messageClear();
-                                        messageAppend("<hiy>已自动领取喜宴</hiy>");
-                                        WG.xiyan();
-                                    } else {
-                                        WG.xiyan();
-                                    }
-                                } else if ((automarry == "关" || automarry === false || automarry === 'false') || GameState.fight.in_fight == true) {
-                                    let b = "<div class=\"item-commands\"><span  id = 'onekeyjh'>参加喜宴</span></div>"
-                                    messageClear();
-                                    messageAppend("<hiy>点击参加喜宴</hiy>");
-                                    messageAppend(b);
-                                    $('#onekeyjh').on('click', function () {
-                                        WG.xiyan();
-                                    });
-                                }
-                            } else if (data.items[n] && data.items[n][0].includes("boss")) {
-                                var boss_name = data.items[n][2].match(/(.*?)被击败了/)?.[1];
-                                BossName = GM_getValue(roleid + "_BossName", BossName);
-                                autoBoss = GM_getValue(roleid + "_autoBoss", autoBoss);
-                                if (boss_name == null || BossName == '') {
-                                    continue;
-                                }
-                                if (boss_name && boss_name.includes("<hi")) {
-                                    boss_name = boss_name.match(/<hi([^>]+)>(.*?)<\/hi\1>/)[2]
-                                }
-                                if (boss_name != BossName) {
-                                    continue;
-                                }
-                                if ((autoBoss == "开" || autoBoss === true || autoBoss === 'true') && GameState.fight.in_fight == false) {
-                                    if (stopauto || WG.at('副本')) {
-                                        let b = "<div class=\"item-commands\"><span  id = 'onekeyboss'>领取BOSS</span></div>"
-                                        messageClear();
-                                        messageAppend("<hiy>自动领取boss</hiy>");
-                                        messageAppend(b);
-                                        $('#onekeyboss').on('click', function () {
-                                            WG.collBoss(data.items[n]);
-                                        });
-                                    } else {
-                                        WG.collBoss(data.items[n]);
-                                    }
-                                } else if (GameState.fight.in_fight == true) {
-                                    let b = "<div class=\"item-commands\"><span  id = 'onekeyboss'>领取BOSS</span></div>"
-                                    messageClear();
-                                    messageAppend("<hiy>点击参加领取BOSS,由于未开启自动领取,或者在战斗中,需要手动领取</hiy>");
-                                    messageAppend(b);
-                                    $('#onekeyboss').on('click', function () {
-                                        WG.collBoss(data.items[n]);
-                                    });
-                                }
-                            }
-                        }
                     }
                 }
             }
@@ -1089,6 +1037,11 @@ var GlobalInit = {
             }, 5000);
 
         });
+
+        // 自动轮询events活动列表（每1分钟）
+        setInterval(() => {
+            WG.SendCmd("events");
+        }, 60000);
     },
     configInit: function () {
         family = GM_getValue(roleid + "_family", family);
@@ -1110,6 +1063,8 @@ var GlobalInit = {
         busy_info = GM_getValue(roleid + "_busy_info", busy_info);
         buffCD = GM_getValue(roleid + "_buffCD", buffCD);
         skillCD = GM_getValue(roleid + "_skillCD", skillCD);
+        skillCDColor = GM_getValue(roleid + "_skillCDColor", skillCDColor);
+        buffCDColor = GM_getValue(roleid + "_buffCDColor", buffCDColor);
         saveAddr = GM_getValue(roleid + "_saveAddr", saveAddr);
         auto_relogin = GM_getValue(roleid + "_auto_relogin", auto_relogin);
         rainbow_name = GM_getValue(roleid + "_rainbow_name", rainbow_name);

@@ -97,6 +97,20 @@ initObserver();
 setTimeout(rainbowplayer, 500);
 });
 
+// 修复聊天区点击玩家名查看玩家功能
+// 使用事件委托处理 cmd 属性（如 cmd='look3 <uid>'）
+$(document).on('click', '.container [cmd], .WG_log_log [cmd], .WG_log [cmd], .channel [cmd]', function(e) {
+    var cmd = $(this).attr('cmd');
+    if (cmd && cmd.indexOf('look3') === 0) {
+        if (typeof SendCommand === 'function') {
+            e.stopPropagation();
+            e.preventDefault();
+            SendCommand(cmd);
+            return false;
+        }
+    }
+});
+
 // 格式化日期时间
 function dateFormat(fmt, date) {
     let ret;
