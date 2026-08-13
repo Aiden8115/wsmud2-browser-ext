@@ -488,7 +488,7 @@ Object.assign(WG, {
           WG.run_hook(data.type, data);
 
           // 合并"你获得了"物品消息（扫荡副本时会有大量重复提示）
-          if (data.type == 'text' && typeof data.msg == 'string' &&
+          if (merge_item_display && data.type == 'text' && typeof data.msg == 'string' &&
               data.msg.indexOf('你获得了') === 0 &&
               data.msg.indexOf('点经验') === -1 &&
               data.msg.indexOf('点潜能') === -1) {

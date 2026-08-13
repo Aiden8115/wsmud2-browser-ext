@@ -347,8 +347,7 @@
 
         GM_addStyle(`.content-bottom { -webkit-user-select: none, -moz-user-select: none, -ms-user-select: none }
   .room-commands > .act-item { min-width: 1em;}
-  .content-message { padding-right: 3.5em; overflow: auto !important; }
-  .content-message pre { white-space: pre !important; }
+  .content-message { padding-right: 3.5em; }
   .dialog-stats > .top-item > .top-sc,
   .dialog-stats > .top-item > .top-title,
   `);
@@ -555,15 +554,14 @@
       .right{ order: 1; display: flex; flex-direction: column; flex-wrap: nowrap; }
       .right-channel { width: 100%; flex: 0 0 50%; overflow: auto; margin-top: 10px; display: flex; flex-direction: column; position: relative; min-height: 0; }
       .channel { max-height: 90% !important; flex: 1; overflow: auto;}
-      .channel pre { white-space: pre !important; overflow: auto !important; max-width: 100%; }
       .right-channel-tabs { flex-shrink: 0; display: flex; gap: 2px; padding: 4px 6px; background: rgba(0,0,0,0.3); border-top: 1px solid rgba(255,255,255,0.15); }
       .right-channel-tabs > span { cursor: pointer; padding: 2px 8px; border-radius: 3px; font-size: 12px; color: #aaa; }
       .right-channel-tabs > span:hover { background: rgba(255,255,255,0.1); color: #fff; }
       .right-channel-tabs > span.selected { background: rgba(190,190,190,0.3); color: #fff; }
       .left-console { width: 100%; flex: 1; overflow: auto; margin: 8px; display: flex; flex-direction: column; min-height: 0; }
-      .WG_log_log { width: 100%;height: 100%; flex: 1; overflow: auto; max-height: none !important; display: flex; flex-direction: column; }
+      .WG_log_log { width: 100%;height: 100%; flex: 1; overflow: hidden; max-height: none !important; display: flex; flex-direction: column; }
       .WG_log_log_title { color: #ffffff; font-size: 14px; font-weight: bold; padding: 4px 10px; border-bottom: 1px solid rgba(255,255,255,0.25); flex-shrink: 0; }
-      .WG_log_log > pre { flex: 1; overflow: auto !important; white-space: pre !important; font-family: 'JetBrains Mono', monospace; font-size: 12px; }
+      .WG_log_log > pre { flex: 1; overflow-y: auto; font-family: 'JetBrains Mono', monospace; font-size: 12px; }
       .right-divider { height: 5px; cursor: row-resize; background: rgba(128,128,128,0.3); flex-shrink: 0; position: relative; z-index: 1; display: none; }
       .right-divider:hover, .right-divider.active { background: rgba(128,128,128,0.6); }
       `
@@ -647,7 +645,7 @@
       .left { height: calc(100vh - 20px); order: -1; display: flex; flex-direction: column; flex-wrap: nowrap; }
       .left-content { width: 100%; height: auto; flex: 0 0 auto;}
       .left-hotkeys { width: 100%; flex: 1; padding-left: 5px; min-height: 0; display: flex; flex-direction: column; overflow: hidden; }
-      .WG_log { width: 100%; flex: 1; overflow: auto; max-height: none !important; min-height: 0; }
+      .WG_log { width: 100%; flex: 1; overflow-y: auto; max-height: none !important; min-height: 0; }
       .map-panel { display: flex; justify-content: center; overflow-x: auto; }
       .map-panel svg.map { flex-shrink: 0; }
       `);
@@ -1213,6 +1211,7 @@
             { id: 'fj_sc', prefix: true },
             { id: 'fjList', prefix: true },
             { id: 'zdyskilllist', prefix: true },
+            { id: 'event_poll_interval', prefix: true },
         ];
         inputIds.forEach(function (item) {
             var $el = container.find('#' + item.id);
@@ -1230,6 +1229,16 @@
             $el.off('change focusout').on('change focusout', function () {
                 setVal(storageKey, $(this).val());
             });
+        });
+
+        // ---- 活动轮询间隔变化时，立即重启定时器 ----
+        container.find('#event_poll_interval').off('change').on('change', function () {
+            var val = parseInt($(this).val()) || 1;
+            if (val < 1) val = 1;
+            event_poll_interval = val;
+            if (typeof unsafeWindow.GlobalInit !== 'undefined' && unsafeWindow.GlobalInit.restartEventPolling) {
+                unsafeWindow.GlobalInit.restartEventPolling();
+            }
         });
 
         // ---- 自定义按钮初始化 ----

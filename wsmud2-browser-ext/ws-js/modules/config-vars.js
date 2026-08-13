@@ -284,6 +284,8 @@ var buffCDColor = 'hig';
 var getitemShow = true;
 var itemTotalCount = {};
 var raidItemData = {};
+// 集中显示获得物品（合并重复的"你获得了"消息）
+var merge_item_display = true;
 var zmlshowsetting = 0;
 
 // 自动喜宴
@@ -306,6 +308,13 @@ var can_auto = true;
 
 //自动购买
 var autoBuyList = "";
+
+//自动买符
+var auto_buy_talisman = false;
+//活动轮询间隔（分钟）
+var event_poll_interval = 1;
+//活动轮询定时器ID
+var _eventPollTimer = null;
 
 //一键分解
 var onekey_fenjie = false;

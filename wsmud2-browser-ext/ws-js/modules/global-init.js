@@ -172,7 +172,7 @@ var GlobalInit = {
                     GameState.packs.max_item_count = data.max_item_count;
                     GameState.packs.money = data.money;
                     // 自动购买商店物品（每日一次，财产>100时触发）
-                    if (data.money > 100) {
+                    if (auto_buy_talisman && data.money > 100) {
                         var today = new Date(), todayStr = today.getFullYear() + '-' + (today.getMonth() + 1) + '-' + today.getDate();
                         if (GM_getValue(roleid + "_auto_shop_date", "") !== todayStr) {
                             GM_setValue(roleid + "_auto_shop_date", todayStr);
@@ -1038,10 +1038,22 @@ var GlobalInit = {
 
         });
 
-        // 自动轮询events活动列表（每1分钟）
-        setInterval(() => {
-            WG.SendCmd("events");
-        }, 60000);
+        // 自动轮询events活动列表（可配置间隔）
+        GlobalInit.restartEventPolling();
+    },
+    // 重启活动轮询定时器
+    restartEventPolling: function () {
+        if (_eventPollTimer) {
+            clearInterval(_eventPollTimer);
+            _eventPollTimer = null;
+        }
+        var interval = parseInt(event_poll_interval) || 1;
+        if (interval < 1) interval = 1;
+        _eventPollTimer = setInterval(function () {
+            if (typeof WG !== 'undefined' && WG.SendCmd) {
+                WG.SendCmd("events");
+            }
+        }, interval * 60000);
     },
     configInit: function () {
         family = GM_getValue(roleid + "_family", family);
@@ -1069,6 +1081,7 @@ var GlobalInit = {
         auto_relogin = GM_getValue(roleid + "_auto_relogin", auto_relogin);
         rainbow_name = GM_getValue(roleid + "_rainbow_name", rainbow_name);
         getitemShow = GM_getValue(roleid + "_getitemShow", getitemShow);
+        merge_item_display = GM_getValue(roleid + "_merge_item_display", merge_item_display);
         zml = GM_getValue(roleid + "_zml", zml);
         ztjk_item = GM_getValue(roleid + "_ztjk", ztjk_item);
         auto_command = GM_getValue(roleid + "_auto_command", auto_command);
@@ -1088,6 +1101,8 @@ var GlobalInit = {
         dpssakada = GM_getValue(roleid + "_dpssakada", dpssakada);
         funnycalc = GM_getValue(roleid + "_funnycalc", funnycalc);
         autoBuyList = GM_getValue(roleid + "_autoBuyList", autoBuyList);
+        auto_buy_talisman = GM_getValue(roleid + "_auto_buy_talisman", auto_buy_talisman);
+        event_poll_interval = parseInt(GM_getValue(roleid + "_event_poll_interval", event_poll_interval)) || 1;
         zdyskilllist = GM_getValue(roleid + "_zdyskilllist", zdyskilllist);
         zdyskills = GM_getValue(roleid + "_zdyskills", zdyskills);
         // 通知推送开关、方式、Token、Url

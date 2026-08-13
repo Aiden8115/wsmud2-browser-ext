@@ -169,6 +169,7 @@ var UI = {
             </select>
             </span></div> `
             + UI.html_switch('getitemShow', '显示获得物品：', 'getitemShow')
+            + UI.html_switch('merge_item_display', '集中显示获得物品：', 'merge_item_display')
             + `
             <div class="setting-item" >
             <span> <label for="zmlshowsetting"> 自命令显示位置： </label><select id="zmlshowsetting" style="width:80px">
@@ -183,6 +184,13 @@ var UI = {
             + UI.html_switch('autoBoss', '自动领取boss', "autoBoss")
             + UI.html_lninput("BossName", "输入自动领取的boss名称")
             + UI.html_lninput("auto_command", "输入喜宴、boss后命令(留空为自动挖矿或修炼)：", "95%")
+
+            + `<h3>自动买符与活动轮询</h3>`
+            + UI.html_switch('autobuytalisman', '进游戏自动买符：', 'auto_buy_talisman')
+            + `
+            <div class="setting-item">
+            <span> <label for="event_poll_interval"> 定时轮询活动间隔时间（分钟）： </label><input id="event_poll_interval" type="number" min="1" style="width:60px" value="1">
+            </span></div> `
 
             + `<h3>自动施法配置</h3>`
             + UI.html_switch('autopfmswitch', '自动施法开关：', 'auto_pfmswitch')

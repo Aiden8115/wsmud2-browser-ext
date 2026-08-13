@@ -4206,11 +4206,33 @@ $to 住房-练功房;dazuo
         ctrl: '#ffb74d',
         str: '#ef9a9a',
         operator: '#ce93d8',
-        number: '#a5d6a7'
+        number: '#a5d6a7',
+        jsKeyword: '#f48fb1'
     };
 
     /**
+     * Highlight JavaScript code with syntax coloring.
+     * @param {string} code - Raw JS source code (already HTML-escaped)
+     * @returns {string} HTML with syntax highlighting spans
+     */
+    function highlightJavaScript(code) {
+        return code.replace(
+            /(\/\/[^\n]*)|("(?:[^"\\]|\\.)*")|('(?:[^'\\]|\\.)*')|(`(?:[^`\\]|\\.)*`)|(\b\d+(?:\.\d+)?\b)|(\b(?:var|let|const|function|if|else|for|while|do|switch|case|break|continue|return|new|this|typeof|instanceof|try|catch|finally|throw|async|await|class|import|export|default|from|true|false|null|undefined|in|of|delete|void|with|yield)\b)/g,
+            function (match, comment, strDouble, strSingle, strTemplate, number, keyword) {
+                if (comment) return '<span style="color:' + RaidScriptColors.comment + '">' + comment + '</span>';
+                if (strDouble) return '<span style="color:' + RaidScriptColors.str + '">' + strDouble + '</span>';
+                if (strSingle) return '<span style="color:' + RaidScriptColors.str + '">' + strSingle + '</span>';
+                if (strTemplate) return '<span style="color:' + RaidScriptColors.str + '">' + strTemplate + '</span>';
+                if (number) return '<span style="color:' + RaidScriptColors.number + '">' + number + '</span>';
+                if (keyword) return '<span style="color:' + RaidScriptColors.jsKeyword + '">' + keyword + '</span>';
+                return match;
+            }
+        );
+    }
+
+    /**
      * Highlight Raid script source code to HTML with colored spans.
+     * Lines starting with @js have the remainder highlighted as JavaScript.
      * @param {string} code - Raw source code
      * @returns {string} HTML with syntax highlighting spans
      */
@@ -4220,23 +4242,33 @@ $to 住房-练功房;dazuo
             .replace(/</g, '&lt;')
             .replace(/>/g, '&gt;');
 
-        // Single-pass token highlighting via alternation regex
-        return escaped.replace(
-            /(\/\/[^\n]*)|(\(:\w+\))|(\(\$\w+\))|(@\w+)|(#\w+)|(\[[\w\u4e00-\u9fa5\s]+\])|("(?:[^"\\]|\\.)*")|('(?:[^'\\]|\\.)*')|(\b\d+(?:\.\d+)?\b)|(==|!=|>=|<=|&&|\|\|)/g,
-            function (match, comment, varColon, varDollar, cmd, dir, ctrl, strDouble, strSingle, number, operator) {
-                if (comment) return '<span style="color:' + RaidScriptColors.comment + '">' + comment + '</span>';
-                if (varColon) return '<span style="color:' + RaidScriptColors.varColon + '">' + varColon + '</span>';
-                if (varDollar) return '<span style="color:' + RaidScriptColors.varNormal + '">' + varDollar + '</span>';
-                if (cmd) return '<span style="color:' + RaidScriptColors.cmd + '">' + cmd + '</span>';
-                if (dir) return '<span style="color:' + RaidScriptColors.dir + '">' + dir + '</span>';
-                if (ctrl) return '<span style="color:' + RaidScriptColors.ctrl + '">' + ctrl + '</span>';
-                if (strDouble) return '<span style="color:' + RaidScriptColors.str + '">' + strDouble + '</span>';
-                if (strSingle) return '<span style="color:' + RaidScriptColors.str + '">' + strSingle + '</span>';
-                if (number) return '<span style="color:' + RaidScriptColors.number + '">' + number + '</span>';
-                if (operator) return '<span style="color:' + RaidScriptColors.operator + '">' + operator + '</span>';
-                return match;
+        // Process line by line to handle @js lines specially
+        return escaped.split('\n').map(function(line) {
+            // Check if line starts with @js (optionally with leading whitespace)
+            var jsMatch = line.match(/^(\s*@js\s?)(.*)$/);
+            if (jsMatch) {
+                var prefix = jsMatch[1].replace(/@js/, '<span style="color:' + RaidScriptColors.cmd + '">@js</span>');
+                return prefix + highlightJavaScript(jsMatch[2]);
             }
-        );
+
+            // Regular line - use existing highlighting
+            return line.replace(
+                /(\/\/[^\n]*)|(\(:\w+\))|(\(\$\w+\))|(@\w+)|(#\w+)|(\[[\w\u4e00-\u9fa5\s]+\])|("(?:[^"\\]|\\.)*")|('(?:[^'\\]|\\.)*')|(\b\d+(?:\.\d+)?\b)|(==|!=|>=|<=|&&|\|\|)/g,
+                function (match, comment, varColon, varDollar, cmd, dir, ctrl, strDouble, strSingle, number, operator) {
+                    if (comment) return '<span style="color:' + RaidScriptColors.comment + '">' + comment + '</span>';
+                    if (varColon) return '<span style="color:' + RaidScriptColors.varColon + '">' + varColon + '</span>';
+                    if (varDollar) return '<span style="color:' + RaidScriptColors.varNormal + '">' + varDollar + '</span>';
+                    if (cmd) return '<span style="color:' + RaidScriptColors.cmd + '">' + cmd + '</span>';
+                    if (dir) return '<span style="color:' + RaidScriptColors.dir + '">' + dir + '</span>';
+                    if (ctrl) return '<span style="color:' + RaidScriptColors.ctrl + '">' + ctrl + '</span>';
+                    if (strDouble) return '<span style="color:' + RaidScriptColors.str + '">' + strDouble + '</span>';
+                    if (strSingle) return '<span style="color:' + RaidScriptColors.str + '">' + strSingle + '</span>';
+                    if (number) return '<span style="color:' + RaidScriptColors.number + '">' + number + '</span>';
+                    if (operator) return '<span style="color:' + RaidScriptColors.operator + '">' + operator + '</span>';
+                    return match;
+                }
+            );
+        }).join('\n');
     }
 
     /**
@@ -4334,8 +4366,8 @@ $to 住房-练功房;dazuo
                     <span class="raid-item customFlow" id="workflows-button"><hig>流程</hig></span>
                     <span class="raid-item moreRaid"><hic>副本</hic></span>
                     <span class="raid-item commandLine"><hir>命令</hir></span>
-                    <span class="raid-item zmlztjk"><hir>自命令</hir></span>
                     <span class="raid-item itemLog"><hig>获得物品</hig></span>                    
+                    <span class="raid-item zmlztjk"><hir>自命令</hir></span>
                 </div>
             </div>`
             if ($('#raidToolbar').length === 0) {
@@ -4347,8 +4379,8 @@ $to 住房-练功房;dazuo
             $(".shortcut").on('click', UI.shortcut);
             $(".moreRaid").on('click', UI.dungeons);
             $(".commandLine").on('click', UI.commandLine);
-            $(".zmlztjk").on('click', WG.zmlztjk);
             $(".itemLog").on('click', UI.itemLog);
+            $(".zmlztjk").on('click', WG.zmlztjk);
         },
 
         trigger: function () {
