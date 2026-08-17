@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "WSMUD 插件",
-  "version": "26.2",
+  "version": "26.2.4",
   "description": "增强《MUD游戏，武神传说》的游戏体验",
   "permissions": [
     "storage",
@@ -10,7 +10,9 @@
   ],
   "host_permissions": [
     "*://*.wsmud2.com/*",
-    "*://120.79.248.245/*"
+    "*://120.79.248.245/*",
+    "*://*.wsmud2.cn/*",
+    "*://8.210.145.215/*"
   ],
   "declarative_net_request": {
     "rule_resources": [
@@ -25,7 +27,8 @@
     {
       "matches": [
         "*://*.wsmud2.com/*",
-        "*://120.79.248.245/*"
+        "*://120.79.248.245/*",
+        "*://*.wsmud2.cn/*"
       ],
       "js": [
         "content.js"
@@ -47,7 +50,8 @@
       ],
       "matches": [
         "*://*.wsmud2.com/*",
-        "*://120.79.248.245/*"
+        "*://120.79.248.245/*",
+        "*://*.wsmud2.cn/*"
       ]
     }
   ],

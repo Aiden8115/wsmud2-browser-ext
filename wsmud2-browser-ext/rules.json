@@ -5,7 +5,7 @@
     "action": { "type": "block" },
     "condition": {
       "urlFilter": "/dist/ws.js",
-      "requestDomains": ["wsmud2.com","120.79.248.245"],
+      "requestDomains": ["wsmud2.com","wsmud2.cn","120.79.248.245"],
       "resourceTypes": ["script"]
     }
   }

@@ -1972,6 +1972,8 @@ Dialog.tasks = {
         this.create_items();
     },
     'onData': function(_t675) {
+        if (!this.isShow)
+            return;
         if (_t675.id)
             return this.update_item(_t675);
         Dialog.title('任务列表');
@@ -3437,9 +3439,9 @@ Dialog.events = {
         this.isShow = true;
     },
     'create_items': function() {
+        if (!this.isShow)
+            return;
         if (!this.element) {
-            if (!this.isShow)
-                return;
             this.element = $("<div class='dialog-events'></div>");
             this.element.appendTo(Dialog.contentElement);
         }
@@ -4146,23 +4148,21 @@ Dialog.extend = {
                     ReceiveMessage("<red>请选择有效的JSON文件！</red>");
                 const _t1043 = new FileReader();
                 _t1043.onload = function(_t1044) {
-                    var _t1045 = _t1040;
                     try {
-                        const _t1046 = JSON[_t1045(2401)](_t1044.target[_t1045(1891)]);
-                        Dialog.extend[_t1045(354)] = _t1046[_t1045(2269)],
-                        Dialog[_t1045(981)].refresh_list(),
-                        Dialog[_t1045(981)].save_extend(),
+                        const _t1046 = JSON.parse(_t1044.target.result);
+                        Dialog.extend.setting = _t1046.items,
+                        Dialog.extend.refresh_list(),
+                        Dialog.extend.save_extend(),
                         ReceiveMessage("<cyn>扩展文件加载成功。</cyn>");
                     } catch (_t1047) {
-                        console[_t1045(1453)]('JSON解析错误：', _t1047),
-                        ReceiveMessage('<red>扩展文件加' + _t1045(1681));
+                        console.error('JSON解析错误：', _t1047),
+                        ReceiveMessage('<red>扩展文件加载失败。</red>');
                     }
                 }
                 ,
                 _t1043.onerror = function() {
-                    var _t1048 = _t1040;
-                    console[_t1048(1453)](_t1048(856), _t1043[_t1048(1453)]),
-                    ReceiveMessage(_t1048(1135) + _t1048(1230));
+                    console.error("文件读取失败：", _t1043.error),
+                    ReceiveMessage('<red>文件读取失败。</red>');
                 }
                 ,
                 _t1043.readAsText(_t1041, "utf-8");
