@@ -1,0 +1,26 @@
+@print 👑 感谢 矮大瓜 分享此副本代码。
+jh fb 11 start1;cr cd/wudu/damen
+@kill 五毒教徒,五毒教徒,五毒教徒,五毒教徒
+go east
+@kill 沙千里
+go south
+@kill 藏獒
+go west
+@kill 白髯老者
+go east
+go south
+@kill 毒郎中
+go north
+go north
+[if](_DungeonWaitSkillCD) == 打开
+    @cd
+go east
+@kill 潘秀达,岑其斯,齐云敖
+[if](_DungeonWaitSkillCD) == 打开
+    @cd
+go east
+@kill 何红药
+[if](_DungeonWaitSkillCD) == 打开
+    @cd
+go east
+@kill 何铁手

@@ -1,0 +1,23 @@
+jh fb 1 start2;cr yz/cuifu/caizhu 1 0
+@kill 大狼狗,大狼狗
+go north
+@kill 管家,家丁,家丁
+[if] (_DungeonWaitSkillCD) == 打开
+    @cd
+go north
+@kill 财主 崔员外
+($open) = 没开
+look men;open men
+@tip 你不会撬锁|钥匙($open)了秘门
+[if] (open) == 打开
+    go east
+    ok {丫鬟}
+    go west;go south;go south
+    ok {丫鬟}?
+    go north;go north;go west
+    select {财主女儿 崔莺莺};ask {财主女儿 崔莺莺} about 东厢
+[else]
+    go west
+@kill 财主女儿 崔莺莺
+[if] (open) == 打开
+    go east;go east;look gui;search gui

@@ -1,0 +1,7 @@
+[(SDYTjlsx)==null]($SDYTjlsx)=85
+                [(SDYTnum)==null]($SDYTnum)=5
+                @print 🐟 一键咸鱼 => <hic>参数设置</hic>
+                #input ($SDYTjlsx)=<hiz>一键设置各种常用流程（陆续更新添加）参数</hiz><br/>&nbsp*&nbsp<ord>🐉 扫荡妖塔</ord> 参数<br/>&nbsp*&nbsp妖塔单次消耗精力上限,(SDYTjlsx)
+                #input ($SDYTnum)=每轮妖塔扫荡次数,(SDYTnum)
+                #config
+                @print 已完成参数设置

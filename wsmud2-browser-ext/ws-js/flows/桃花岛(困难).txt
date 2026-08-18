@@ -1,0 +1,14 @@
+jh fb 18 start2;cr taohua/haitan 1 0
+@until (:path) == taohua/haitan
+@taohualin
+@wait 1000
+go south
+@kill 陆乘风
+go east;go east
+@kill 曲灵风
+[if] (_DungeonWaitSkillCD) == 打开
+    @cd
+go east;go east
+@kill 黄药师
+go west;go north
+@kill 黄蓉

@@ -204,6 +204,40 @@
             background-color: var(--color-success);
         }
 
+        .storage-info {
+            margin-top: 8px;
+            padding: 0 4px;
+        }
+        .storage-label {
+            font-size: 0.8rem;
+            color: var(--color-text-secondary);
+        }
+        .storage-usage {
+            float: right;
+            font-size: 0.8rem;
+            color: var(--color-text);
+        }
+        .storage-bar-bg {
+            margin-top: 4px;
+            height: 6px;
+            background-color: var(--color-border);
+            border-radius: 3px;
+            overflow: hidden;
+        }
+        .storage-bar-fill {
+            height: 100%;
+            width: 0%;
+            border-radius: 3px;
+            background-color: var(--color-primary);
+            transition: width 0.3s ease;
+        }
+        .storage-bar-fill.warning {
+            background-color: var(--color-warning, #e67e22);
+        }
+        .storage-bar-fill.danger {
+            background-color: var(--color-danger, #e74c3c);
+        }
+
         footer.footer {
             text-align: center;
             font-size: 0.75rem;
@@ -282,6 +316,15 @@
             <input type="file" id="importInput" accept=".json" style="display:none;" aria-label="选择配置文件">
             <button id="importBtn" aria-label="导入配置">导入配置</button>
             <span class="note-text">注：配置中包含内置扩展，会一并导入导出</span>
+        </div>
+        <div class="data-section">
+            <div class="storage-info">
+                <span class="storage-label">存储空间</span>
+                <span class="storage-usage" id="storageUsage">计算中...</span>
+                <div class="storage-bar-bg">
+                    <div class="storage-bar-fill" id="storageBar"></div>
+                </div>
+            </div>
         </div>
     </section>
 </main>

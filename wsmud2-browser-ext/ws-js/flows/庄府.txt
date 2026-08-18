@@ -1,0 +1,15 @@
+@print 👑 感谢 qwer68588 分享此副本代码。
+jh fb 5 start1;cr bj/zhuang/xiaolu
+go north
+@kill 土匪
+go north
+look men;break men
+go north
+@kill 神龙教弟子,神龙教弟子
+go north
+@kill 神龙教弟子
+@kill 神龙教小头目 章老三
+go west
+@kill 神龙教弟子
+go east;go east
+@kill 神龙教弟子

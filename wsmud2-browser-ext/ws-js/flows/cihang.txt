@@ -1,0 +1,60 @@
+[if] (:room 慈航静斋) == false
+    @print <hiy>请先进入慈航副本再运行。</hiy>
+    [exit]
+[else]
+    [if] (:room) != 慈航静斋-山门(副本区域) && (:room) != 慈航静斋-帝踏峰(副本区域)
+        @print <hiy>请在山门或帝踏峰运行。</hiy>
+        [exit]
+($go) = 'east','west','south','north'
+($qiku) = '老','病','死','爱别离','怨憎会','求不得'
+($num1) = 0
+[if] (:room) == 慈航静斋-山门(副本区域)
+    go south
+[else if] (:room) == 慈航静斋-帝踏峰(副本区域)
+    go south[2]
+@print <hiy>开始自动寻路，寻路期间请勿点击地图……</hiy>
+@cmdDelay 500
+[while] (num1) < 6
+    @js ($ku) = [(qiku)][(num1)]
+    ($num2) = 0
+    [while] true
+        [if] (map) != null && (retry) == true
+            (map)
+            @await 500
+        @js ($fx) = [(go)][(num2)]
+        [if] (fx) == null
+            @print <hiy>自动寻路失败，请回到山门重新运行！</hiy>
+            [exit]
+        go (fx)
+        [if] (:room) == 慈航静斋-七重门(副本区域)
+            @js ($ku_now) = $(".room_desc").text().match("，是名([^%]+)苦。")[1]
+            [if] (ku) != (ku_now)
+                [while] true
+                    go west
+                    [if] (:room) == 慈航静斋-七重门(副本区域)
+                        @js ($dir_gc) = $("text:contains('广场')").attr("dir")
+                    [if] (dir_gc) == south
+                        go south
+                    @await 200
+                    [if] (:room) == 慈航静斋-山门(副本区域)
+                        [break]
+                    [else if] (:room) == 慈航静斋-广场(副本区域)
+                        @print <hiy>已走出七重门！</hiy>
+                        [exit]
+                go south
+                ($num2) = (num2) + 1
+                ($retry) = true
+            [else]
+                [if] (map) == null
+                    ($map) = go (fx)
+                [else]
+                    ($map) = (map);go (fx)
+                ($retry) = false
+                [break]
+        [else if] (:room) == 慈航静斋-广场(副本区域)
+            @print <hiy>已走出七重门！</hiy>
+            [exit]
+    ($num1) = (num1) + 1
+go south
+[if] (:room) == 慈航静斋-广场(副本区域)
+    @print <hiy>已走出七重门！</hiy>

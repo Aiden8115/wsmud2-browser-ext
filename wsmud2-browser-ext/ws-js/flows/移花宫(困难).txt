@@ -1,0 +1,39 @@
+jh fb 22 start2;cr huashan/yihua/shandao 1 0
+go south[5]
+go south[5]
+go south[5]
+@kill 花月奴
+go south;go south
+@kill 移花宫女弟子,移花宫女弟子
+($id) = {移花宫女弟子}
+[if] (:exist (id)) == true
+    $killw 移花宫女弟子
+go south
+@kill 移花宫女弟子,移花宫女弟子
+($id) = {移花宫女弟子}
+[if] (:exist (id)) == true
+    $killw 移花宫女弟子
+[if] (_DungeonWaitSkillCD) == 打开
+    @cd
+go southeast
+@kill 涟星
+[if] {r邀月}? != null
+    @kill 邀月
+[if] {邀月的尸体}? == null
+    [if] (_DungeonWaitSkillCD) == 打开
+        @cd
+go northwest;go southwest
+[if] {r邀月}? != null
+    @kill 邀月
+[if] {b火折子g}? != null
+    look hua
+    @tip 你数了下大概有($number)朵花
+    go southeast
+    look bed;pushstart bed
+    pushleft bed[(number)]
+    @await 1000
+    pushright bed[8]
+    @await 1000
+    go down;fire;go west
+    @kill 花无缺
+    look xia;open xia

@@ -381,6 +381,20 @@ var GlobalInit = {
                     GameState.id = data.id;
                     GameState.connected = true;
                     WG.online = true;
+                    // 3.3 配置每日自动备份：登录后检查当天是否已备份
+                    (function() {
+                        var today = new Date();
+                        var todayStr = today.getFullYear() + '-' + (today.getMonth() + 1) + '-' + today.getDate();
+                        var lastBackup = GM_getValue('_lastBackupDate', '');
+                        if (lastBackup !== todayStr && typeof WG.make_config === 'function') {
+                            // 延迟执行，等待插件完全初始化
+                            setTimeout(function() {
+                                WG.make_config();
+                                GM_setValue('_lastBackupDate', todayStr);
+                                console.log('[auto-backup] 已自动备份配置到云端');
+                            }, 5000);
+                        }
+                    })();
                     break;
                 case "exits":
                     GameState.room.exits = new Map();
@@ -497,7 +511,7 @@ var GlobalInit = {
                                     GameState.selfStatus.push(item.status[x].sid)
                                 }
                             }
-                            let n = $.trim($('<body>' + item.name + '</body>').text());
+                            let n = item.name.replace(/<[^>]*>/g, '').trim();
                             let i = n.lastIndexOf(' ');
                             let j = n.lastIndexOf('<');
                             let t = "";
@@ -1079,6 +1093,7 @@ var GlobalInit = {
         buffCDColor = GM_getValue(roleid + "_buffCDColor", buffCDColor);
         saveAddr = GM_getValue(roleid + "_saveAddr", saveAddr);
         auto_relogin = GM_getValue(roleid + "_auto_relogin", auto_relogin);
+        auto_relogin_page = GM_getValue(roleid + "_auto_relogin_page", auto_relogin_page);
         rainbow_name = GM_getValue(roleid + "_rainbow_name", rainbow_name);
         getitemShow = GM_getValue(roleid + "_getitemShow", getitemShow);
         merge_item_display = GM_getValue(roleid + "_merge_item_display", merge_item_display);

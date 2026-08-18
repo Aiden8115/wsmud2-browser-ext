@@ -957,7 +957,7 @@
 
     // 发送命令：支持字符串或数组（数组首项为数字时作为延迟毫秒）
     function SendCommand(command) {
-        if (command instanceof Array) {
+        if (Array.isArray(command)) {
             if (command.length === 0) return;
             let cmd1 = command[0];
             let cmd2 = command.slice(1);

@@ -13,16 +13,32 @@
     }`;
     (document.head || document.documentElement).appendChild(fontStyle);
 
-    // 要加载的自定义脚本列表（不包含可选的 funny2.js）
-    // 注意：Main_pluginss.js 已按模块拆分为以下 18 个文件，必须按此顺序加载
-    const baseScriptFiles = [
+    // 从 content script 注入 CSS 链接（page script 无 chrome.runtime 访问权限）
+    const cssLinks = [
+        'ws-js/lib/jquery.contextMenu.min.css',
+        'ws-js/lib/skin/layer.css',
+        'ws-js/lib/font-awesome.css'
+    ];
+    cssLinks.forEach(function (cssFile) {
+        var link = document.createElement('link');
+        link.rel = 'stylesheet';
+        link.href = chrome.runtime.getURL(cssFile);
+        (document.head || document.documentElement).appendChild(link);
+    });
+
+    // 核心组（有依赖关系，需串行加载）
+    const coreFiles = [
         "ws-js/core/GM_API.js",
         "ws-js/core/utils.js",
         "ws-js/lib/jQuery.js",
         "ws-js/lib/Vue.js",
         "ws-js/lib/layer.js",
         "ws-js/lib/jQuery_contextMenu.js",
-        "ws-js/lib/store.js",
+        "ws-js/lib/store.js"
+    ];
+
+    // 非核心组（无依赖关系，可并行加载）
+    const moduleFiles = [
         // --- 原 Main_pluginss.js 拆分开始 ---
         "ws-js/modules/proto-ext.js",
         "ws-js/modules/chat-display.js",
@@ -55,29 +71,45 @@
         "ws-js/core/ws.js"
     ];
 
-    // funny2.js 在脚本序列中的插入位置（位于 main-ready.js 之后、Raid.js 之前）
-    const FUNNY2_INSERT_INDEX = 28;
+    // funny2.js 在模块组中的插入位置（原索引 28 减去核心组 7 个 = 21）
+    const FUNNY2_INSERT_INDEX = 21;
 
     let extensionEnabled = true;
     let loadFunny2 = true;
 
-    // 按顺序加载自定义脚本
+    // 并行加载一组脚本（async=false 确保按插入顺序执行）
+    function loadScriptsParallel(files) {
+        return Promise.all(files.map(file => {
+            return new Promise(resolve => {
+                var script = document.createElement('script');
+                script.src = chrome.runtime.getURL(file);
+                script.async = false;
+                script.onload = script.onerror = resolve;
+                (document.head || document.documentElement).appendChild(script);
+            });
+        }));
+    }
+
+    // 按依赖分组加载脚本：核心组串行 → 其余并行
     function loadScriptsInOrder() {
         if (!extensionEnabled) {
             console.log("扩展已禁用，跳过自定义脚本加载");
             return Promise.resolve();
         }
 
-        const scriptFiles = baseScriptFiles.slice();
+        const moduleList = moduleFiles.slice();
         if (loadFunny2) {
-            scriptFiles.splice(FUNNY2_INSERT_INDEX, 0, "ws-js/features/funny2.js");
+            moduleList.splice(FUNNY2_INSERT_INDEX, 0, "ws-js/features/funny2.js");
         }
 
+        // 第一步：串行加载核心组
         let chain = Promise.resolve();
-        scriptFiles.forEach((file) => {
+        coreFiles.forEach((file) => {
             chain = chain.then(() => loadScript(chrome.runtime.getURL(file)));
         });
-        return chain;
+
+        // 第二步：并行加载其余脚本
+        return chain.then(() => loadScriptsParallel(moduleList));
     }
 
     // 加载单个脚本的辅助函数
@@ -107,6 +139,8 @@
 
     // 接收页面脚本回传的调用结果
     window.addEventListener("message", (event) => {
+        // 7.1 安全加固：只信任本窗口来源
+        if (event.source !== window) return;
         if (!event.data || !event.data.__EXT_BRIDGE__) return;
         const { id, result, error } = event.data;
         if (!id) return;
@@ -124,6 +158,8 @@
 
     // 接收页面脚本发起的 openHtmlFile 请求，转发给 background
     window.addEventListener("message", (event) => {
+        // 7.1 安全加固：只信任本窗口来源
+        if (event.source !== window) return;
         if (!event.data || !event.data.__EXT_BRIDGE__) return;
         if (event.data.action !== 'openHtmlFile') return;
 
@@ -223,6 +259,23 @@
                 }
             } catch (err) {
                 sendResponse({ success: false, error: String(err) });
+            }
+            return true;
+        }
+
+        if (message.action === 'getStorageUsage') {
+            try {
+                var totalBytes = 0;
+                var keyCount = 0;
+                for (var i = 0; i < localStorage.length; i++) {
+                    var key = localStorage.key(i);
+                    var val = localStorage.getItem(key);
+                    totalBytes += (key ? key.length : 0) + (val ? val.length : 0);
+                    keyCount++;
+                }
+                sendResponse({ usage: { keyCount: keyCount, totalBytes: totalBytes } });
+            } catch (err) {
+                sendResponse({ usage: { keyCount: 0, totalBytes: 0 } });
             }
             return true;
         }

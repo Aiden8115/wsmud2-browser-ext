@@ -268,7 +268,7 @@ Object.assign(WG, {
       },
       zml_edit: function () {
           zml = GM_getValue(roleid + "_zml", zml);
-          if (! typeof zml instanceof Array) {
+          if (!Array.isArray(zml)) {
               zml = [];
           }
           messageClear();
@@ -683,6 +683,130 @@ Object.assign(WG, {
           WG.dsj_func();
           LayerHelper.msg("已恢复默认设置，请刷新页面生效");
       }, //设置
+      storageReport: function () {
+          try {
+              var keys = GM_listValues();
+              var totalSize = 0;
+              var roleKeys = {};
+              var orphanKeys = [];
+              var knownRoleIds = new Set();
+
+              // 先收集所有角色ID
+              for (var i = 0; i < keys.length; i++) {
+                  var key = keys[i];
+                  var size = (localStorage.getItem(key) || '').length;
+                  totalSize += size;
+                  // 匹配 roleid_xxx 格式的键
+                  var match = key.match(/^(\d+)_/);
+                  if (match) {
+                      var rid = match[1];
+                      if (!roleKeys[rid]) roleKeys[rid] = { count: 0, size: 0 };
+                      roleKeys[rid].count++;
+                      roleKeys[rid].size += size;
+                      knownRoleIds.add(rid);
+                  }
+              }
+
+              // 检测孤儿键：属于已知角色ID但角色不存在的键
+              // 当前角色 ID 不在已登录的角色列表中
+              var currentRoleId = GameState.id || '';
+              for (var rid in roleKeys) {
+                  if (rid !== currentRoleId && rid !== '') {
+                      orphanKeys.push(rid);
+                  }
+              }
+
+              // 输出报告
+              var report = [];
+              report.push('========== 存储诊断报告 ==========');
+              report.push('总键数：' + keys.length);
+              report.push('总占用空间：' + (totalSize / 1024).toFixed(1) + 'KB（' + (totalSize / 1024 / 1024).toFixed(2) + 'MB）');
+              report.push('当前角色ID：' + currentRoleId);
+              report.push('--- 角色分布 ---');
+              for (var rid in roleKeys) {
+                  var rk = roleKeys[rid];
+                  var mark = (rid === currentRoleId) ? ' [当前]' : '';
+                  report.push('角色 ' + rid + '：' + rk.count + ' 个键，' + (rk.size / 1024).toFixed(1) + 'KB' + mark);
+              }
+              if (orphanKeys.length > 0) {
+                  report.push('--- 孤儿角色（可能已删除）---');
+                  for (var i = 0; i < orphanKeys.length; i++) {
+                      var rk = roleKeys[orphanKeys[i]];
+                      report.push('角色 ' + orphanKeys[i] + '：' + rk.count + ' 个键，' + (rk.size / 1024).toFixed(1) + 'KB');
+                  }
+              } else {
+                  report.push('未发现孤儿键');
+              }
+              report.push('===================================');
+
+              messageClear();
+              for (var i = 0; i < report.length; i++) {
+                  messageAppend(report[i]);
+              }
+              LayerHelper.msg('诊断报告已输出');
+          } catch (e) {
+              console.error('storageReport error', e);
+              LayerHelper.msg('诊断失败：' + e.message);
+          }
+      },
+      cleanOrphanKeys: function () {
+          try {
+              var keys = GM_listValues();
+              var orphanKeyList = [];
+              var knownRoleIds = new Set();
+              var currentRoleId = GameState.id || '';
+
+              // 收集所有角色ID
+              for (var i = 0; i < keys.length; i++) {
+                  var match = keys[i].match(/^(\d+)_/);
+                  if (match) knownRoleIds.add(match[1]);
+              }
+
+              // 构建孤儿键列表（排除当前角色和非角色键）
+              for (var i = 0; i < keys.length; i++) {
+                  var key = keys[i];
+                  var match = key.match(/^(\d+)_/);
+                  if (match && match[1] !== currentRoleId) {
+                      orphanKeyList.push(key);
+                  }
+              }
+
+              if (orphanKeyList.length === 0) {
+                  LayerHelper.msg('未发现孤儿键，无需清理');
+                  return;
+              }
+
+              // 生成清理预览列表
+              var preview = '以下键将被删除：\n';
+              for (var i = 0; i < Math.min(orphanKeyList.length, 20); i++) {
+                  preview += '  ' + orphanKeyList[i] + '\n';
+              }
+              if (orphanKeyList.length > 20) {
+                  preview += '  ... 共 ' + orphanKeyList.length + ' 个键';
+              }
+
+              if (!confirm('清理前将自动备份当前配置。\n\n' + preview + '\n是否继续？')) {
+                  return;
+              }
+
+              // 自动备份
+              if (typeof WG.make_config === 'function') {
+                  WG.make_config();
+              }
+
+              // 执行清理
+              var deletedCount = 0;
+              for (var i = 0; i < orphanKeyList.length; i++) {
+                  GM_deleteValue(orphanKeyList[i]);
+                  deletedCount++;
+              }
+
+              LayerHelper.msg('已清理 ' + deletedCount + ' 个孤儿键，配置已备份到云端');
+          } catch (e) {
+              console.error('cleanOrphanKeys error', e);
+              LayerHelper.msg('清理失败：' + e.message);
+          }
+      },
       setting: function () {
           KEY.do_command("setting");
 
@@ -694,6 +818,31 @@ Object.assign(WG, {
               $(".dialog-extend").prepend(a);
 
           }
+          // 设置面板搜索框
+          if ($('.setting-search-box').length === 0) {
+              $(".dialog-extend .zdy_dialog").first().after(
+                  '<div class="setting-item" style="padding:4px 0;">' +
+                  '<input class="setting-search-box" type="text" placeholder="搜索设置项..." ' +
+                  'style="width:100%;box-sizing:border-box;padding:4px 6px;border:1px solid #555;border-radius:3px;background:#222;color:#0f0;">' +
+                  '</div>'
+              );
+          }
+          $('.setting-search-box').off('keyup').on('keyup', function () {
+              var keyword = $(this).val().trim().toLowerCase();
+              $('.dialog-extend .setting-item').each(function () {
+                  var $item = $(this);
+                  // 跳过搜索框自身
+                  if ($item.find('.setting-search-box').length || $item.hasClass('zdy_dialog')) return;
+                  var text = $item.text().toLowerCase();
+                  $item.toggle(keyword === '' || text.indexOf(keyword) >= 0);
+              });
+              $('.dialog-extend h3').each(function () {
+                  var $h3 = $(this);
+                  var hasVisible = $h3.nextUntil('h3', '.setting-item').filter(':visible').length > 0;
+                  $h3.toggle(keyword === '' || hasVisible);
+              });
+          });
+
           $(".dialog-extend").off('click');
           $("#family").off('change');
           $('#autorelogin').off('click')
@@ -717,6 +866,9 @@ Object.assign(WG, {
           $('.clear_skillJson').off('click')
           $('.backup_btn').off('click')
           $('.load_btn').off('click')
+          $('.restore_btn').off('click')
+          $('.storage_report_btn').off('click')
+          $('.clean_orphan_btn').off('click')
           $('.reset_default_btn').off('click')
           $('#autoBuy').off('change')
           $('#backimageurl').off('change')
@@ -880,7 +1032,7 @@ Object.assign(WG, {
           $('#zdyskilllist').change(function () {
 
               let x = JSON.parse($("#zdyskilllist").val());
-              if (!typeof x instanceof Array) {
+              if (!Array.isArray(x)) {
                   alert("无效的输入")
                   return false;
               } else {
@@ -943,6 +1095,9 @@ Object.assign(WG, {
           });
           $('.backup_btn').on('click', WG.make_config);
           $('.load_btn').on('click', WG.load_config);
+          $('.restore_btn').on('click', WG.load_config);
+          $('.storage_report_btn').on('click', WG.storageReport);
+          $('.clean_orphan_btn').on('click', WG.cleanOrphanKeys);
           $('.reset_default_btn').on('click', WG.reset_default);
           $('.clear_skillJson').on('click', () => {
               zdyskilllist = "";

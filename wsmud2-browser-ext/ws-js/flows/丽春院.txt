@@ -1,0 +1,8 @@
+jh fb 3 start1;cr yz/lcy/dating
+@kill 韦春芳
+go up
+@kill 龟公
+go west
+@kill 史松
+look tai;tui tai;go enter
+@kill 茅十八

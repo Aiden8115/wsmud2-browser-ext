@@ -21,9 +21,35 @@ function GM_addStyle(css) {
 function GM_setValue(key, value) {
     try {
         localStorage.setItem(key, JSON.stringify(value));
+        // 3.4 localStorage 超限告警：估算当前已用空间
+        var totalSize = GM_getStorageUsage().totalBytes;
+        if (totalSize > 4 * 1024 * 1024) {
+            var msg = 'localStorage 存储空间已使用 ' + (totalSize / 1024 / 1024).toFixed(1) + 'MB，接近 5MB 上限。\n建议及时导出备份，避免数据丢失。';
+            console.warn('[storage] ' + msg);
+            if (typeof Push !== 'undefined') {
+                Push('[wsmud插件] 存储空间告警：' + msg);
+            }
+        }
     } catch (e) {
         console.log("GM_setValue: " + e);
     }
+}
+
+// 估算 localStorage 已用空间（字节数）
+function GM_getStorageUsage() {
+    var totalBytes = 0;
+    var keyCount = 0;
+    try {
+        for (var i = 0; i < localStorage.length; i++) {
+            var key = localStorage.key(i);
+            var val = localStorage.getItem(key);
+            totalBytes += (key ? key.length : 0) + (val ? val.length : 0);
+            keyCount++;
+        }
+    } catch (e) {
+        console.log("GM_getStorageUsage: " + e);
+    }
+    return { keyCount: keyCount, totalBytes: totalBytes };
 }
 
 // 从 localStorage 读取一个值并反序列化

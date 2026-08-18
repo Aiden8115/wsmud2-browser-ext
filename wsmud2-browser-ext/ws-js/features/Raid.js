@@ -3,8 +3,67 @@
 // 角色与房间状态、对话框/任务/事件列表、襄阳战等模块。
 // 注意：本文件为大文件（6.5K+ 行），重构时仅做安全格式化，不改变变量名与逻辑行为。
 (function () {
-
     'use strict';
+
+    const Dungeons = [
+        {name: "华山论剑",},
+        {name: "光明顶(组队)",},
+        {name: "光明顶",},
+        {name: "燕子坞(困难)",},
+        {name: "燕子坞(简单)",},
+        {name: "燕子坞(偷书)",},
+        {name: "移花宫(困难)",},
+        {name: "移花宫(简单)",},
+        {name: "冰火岛(困难)"},
+        {name: "冰火岛(简单)",},
+        {name: "星宿海",},
+        {name: "白驼山",},
+        {name: "白驼山(组队)",},
+        {name: "桃花岛(困难)"},
+        {name: "桃花岛(简单)",},
+        {name: "云梦沼泽(组队)",},
+        {name: "云梦沼泽",},
+        {name: "嵩山"},
+        {name: "泰山"},
+        {name: "衡山",},
+        {name: "青城山",},
+        {name: "恒山",},
+        {name: "五毒教(组队)",},
+        {name: "五毒教",},
+        {name: "温府", desc: "温府(2k+闪避)",},
+        {name: "关外",},
+        {name: "神龙教(组队)",},
+        {name: "神龙教",},
+        {name: "天地会",},
+        {name: "鳌拜府",},
+        {name: "庄府",},
+        {name: "兵营",},
+        {name: "流氓巷(组队)",},
+        {name: "流氓巷",},
+        {name: "丽春院",},
+        {name: "财主家(困难)",},
+        {name: "财主家(简单)",}
+    ];
+
+    // 从当前 script 标签的 src 推导扩展基准 URL
+    const __extBaseUrl = (function () {
+        var scripts = document.getElementsByTagName('script');
+        for (var i = 0; i < scripts.length; i++) {
+            var src = scripts[i].src;
+            if (src && src.indexOf('ws-js/features/Raid.js') != -1) {
+                return src.substring(0, src.indexOf('ws-js/features/Raid.js'));
+            }
+        }
+        return '';
+    })();
+
+    // 加载外部流程文件（异步）
+    async function loadFlowFile(path) {
+        var url = __extBaseUrl + 'ws-js/flows/' + path;
+        var response = await fetch(url);
+        if (!response.ok) throw new Error('Failed to load flow: ' + path);
+        return await response.text();
+    }
 
     /***********************************************************************************\
         工具层
@@ -145,7 +204,7 @@
                 return p.priority >= c.priority;
             });
         }
-    };
+    }
 
     class Precompiler {
         precompile(source) {
@@ -819,11 +878,12 @@
             validText = validText.replace(/<(\w+)>/g, "「$1」");
             validText = validText.replace(/<(\/\w+)>/g, "「¿$1」");
             var result = patt.exec(validText);
+            if (!result) return false;
             var opt = result[0];
             var parts = validText.split(opt);
             var left = parts[0].replace(/^\s*|\s*$/g, "");
             var lvalue = AssertLeftMarkHandlerCenter.getValue(left);
-            var rvalue = parts[1].replace(/^\s*|\s*$/g, "");;
+            var rvalue = parts[1].replace(/^\s*|\s*$/g, "");
             var lfloat = parseFloat(lvalue);
             var rfloat = parseFloat(rvalue);
             var byDigit = false;
@@ -1073,7 +1133,9 @@
                 this._doing = true;
                 await CmdExecuteCenter.execute(this, cmd);
             } catch (err) {
-                Message.append(`<ord>执行错误</ord>: ${err}`);
+                var cmdSnippet = cmd ? cmd.substring(0, 40) + (cmd.length > 40 ? '...' : '') : '(空)';
+                Message.append(`<ord>流程 [${this._name}] 命令 [${cmdSnippet}] 出错</ord>: ${err}`);
+                console.log(`流程 [${this._name}] 命令 [${cmdSnippet}] 出错:`, err);
                 this.stop();
                 return;
             } finally {
@@ -1208,6 +1270,7 @@
         const execute = function (performer, cmd) {
             const validCmd = CmdPrehandleCenter.shared().handle(performer, cmd);
             var result = patt.exec(validCmd);
+            if (!result) return;
             var name = result[1];
             var exp = result[2];
             UpdateVariable(performer, name, exp);
@@ -1358,6 +1421,56 @@
     (function () {
         const executor = new AtCmdExecutor("show", function (performer, param) {
             Message.append(param,1);
+        });
+        CmdExecuteCenter.addExecutor(executor);
+    })();
+
+    (function () {
+        const executor = new AtCmdExecutor("zmlwait", function (performer, param) {
+            if (param == null || param.length == 0) {
+                if (performer.log()) Message.cmdLog("@zmlwait 需要指定自命令名称");
+                return;
+            }
+            // 查找自命令（zml 数组在全局作用域中定义）
+            var zmlList = typeof unsafeWindow !== 'undefined' && unsafeWindow.zml ? unsafeWindow.zml : (typeof zml !== 'undefined' ? zml : []);
+            var target = null;
+            for (var i = 0; i < zmlList.length; i++) {
+                if (zmlList[i].name == param) {
+                    target = zmlList[i];
+                    break;
+                }
+            }
+            if (target == null) {
+                if (performer.log()) Message.cmdLog(`未找到自命令: ${param}`);
+                return;
+            }
+            var runContent = target.zmlRun;
+            var type = target.zmlType || "0";
+            if (type == "1" || type === 1) {
+                // RaidJS 流程类型 — 阻塞等待完成
+                if (performer.log()) Message.cmdLog(`执行自命令(阻塞): ${param}`);
+                return new Promise(function (resolve) {
+                    var subPerformer = new Performer("zmlwait-" + param, runContent);
+                    subPerformer.log(false);
+                    subPerformer.start(function () {
+                        resolve();
+                    });
+                });
+            } else if (type == "2" || type === 2) {
+                // JS 原生类型
+                try {
+                    new Function(runContent)();
+                } catch (e) {
+                    Message.append(`<ord>自命令 ${param} JS 执行出错</ord>: ${e}`);
+                }
+                return;
+            } else {
+                // 原生命令类型 — 通过 WG.SendCmd 发送
+                if (typeof WG !== 'undefined' && WG.SendCmd) {
+                    WG.SendCmd(runContent);
+                }
+                return;
+            }
         });
         CmdExecuteCenter.addExecutor(executor);
     })();
@@ -1787,8 +1900,8 @@
         hasStatus: function (s) {
             var stamp = Role.status[s];
             if (stamp == null) return false;
-            if (stamp < new Date().getTime()) return false;
-            return true;
+            return stamp >= new Date().getTime();
+
         },
         isFree: function () {
             return !Role.hasStatus("busy") && !Role.hasStatus("faint") && !Role.hasStatus("rash");
@@ -1888,11 +2001,7 @@
         },
         hasSkill: function (skill) {
             var combatStr = $('.combat-commands').html()
-            if (combatStr.indexOf(skill) != -1) {
-                return true;
-            } else {
-                return false;
-            }
+            return combatStr.indexOf(skill) != -1;
         },
         weapon: function () {
             return Role._weaponType
@@ -1991,11 +2100,7 @@
         },
         _monitorDeath: function () {
             WG.add_hook("die", function (data) {
-                if (data.relive == true) {
-                    Role.living = true;
-                } else {
-                    Role.living = false;
-                }
+                Role.living = data.relive == true;
             });
         },
         _monitorInfo: function () {
@@ -2654,7 +2759,28 @@
             ":state": Role.state,            // RoleState
             ":combating": Role.combating,    // true/false
             ":free": Role.isFree,
-            ":gains": Role.profitInfo,
+            ":gains": (function () {
+                if (Role.profitInfo) return Role.profitInfo;
+                // 从 _gains 数组实时汇总最近5分钟的数据
+                var recent = Date.now() - 300000;
+                var sessionGains = {};
+                for (var i = Role._gains.length - 1; i >= 0; i--) {
+                    var g = Role._gains[i];
+                    if (g.timestamp < recent) break;
+                    var key = g.name;
+                    if (!sessionGains[key]) sessionGains[key] = { count: 0, unit: g.unit };
+                    sessionGains[key].count += g.count;
+                }
+                var parts = [];
+                for (var name in sessionGains) {
+                    if (!sessionGains.hasOwnProperty(name)) continue;
+                    var info = sessionGains[name];
+                    parts.push(name + ' ' + info.count + info.unit);
+                }
+                return parts.length > 0 ? parts.join('; ') : null;
+            })(),
+            ":idle": (Date.now() - __lastActionTime) > __idleThreshold * 1000,
+            ":idle_time": Math.floor((Date.now() - __lastActionTime) / 1000),
 
             ":room": Room.name,
             ":path": Room.path,
@@ -2694,6 +2820,19 @@
             ":kf_an_c": Role.kongfu.an_c
         };
     });
+
+    //---------------------------------------------------------------------------
+    //  Idle Timer
+    //---------------------------------------------------------------------------
+    var __idleThreshold = 30; // 发呆阈值（秒）
+    var __lastActionTime = Date.now();
+    function __initIdleTimer() {
+        if (typeof WG !== 'undefined' && WG && WG.add_hook) {
+            WG.add_hook(["status", "login", "exits", "room", "items", "itemadd", "itemremove", "sc", "text", "state", "msg", "perform", "clearDistime", "dispfm", "combat", "die"], function () {
+                __lastActionTime = Date.now();
+            });
+        }
+    }
 
     VariableStore.register(_ => {
         return {
@@ -2953,6 +3092,11 @@
 
             Role.profitInfo = content != "" ? content : null;
 
+            // 保存到持久变量 _lastGains
+            if (PersistentVariables) {
+                PersistentVariables.save("_lastGains", content != "" ? content : null);
+            }
+
             if (cmd.indexOf("recordGains->nopopup") == 0 || cmd.indexOf("recordGains->silent") == 0) return;
             layer.open({
                 type: 1,
@@ -3127,7 +3271,7 @@
             const parts = param.split(",");
             let infos = [];
             for (let i = 0; i < parts.length; i++) {
-                const name = parts[i];
+                let name = parts[i];
                 let blurry = true;
                 if (name.substring(name.length - 1) == "%") {
                     name = name.substring(0, name.length - 1);
@@ -3372,14 +3516,39 @@
         Dungeons
     \***********************************************************************************/
 
+    // 异步流式加载外部流程文件（缓存副本源码）
+    var _dungeonSourceCache = {};
+    var _dungeonLoadPromise = null;
+
+    // 同步检查缓存中是否已加载
     const GetDungeonFlow = function (name) {
-        for (const d of Dungeons) {
-            if (d.name == name) {
-                return d.source;
-            }
-        }
-        return null;
+        return _dungeonSourceCache[name] || null;
     };
+
+    // 异步获取副本源码（自动加载并缓存）
+    async function GetDungeonFlowAsync(name) {
+        if (_dungeonSourceCache[name] !== undefined) {
+            return _dungeonSourceCache[name];
+        }
+        try {
+            var text = await loadFlowFile(encodeURIComponent(name) + '.txt');
+            _dungeonSourceCache[name] = text;
+            return text;
+        } catch (e) {
+            return null;
+        }
+    }
+
+    // 异步预加载所有副本流程
+    function preloadAllDungeonFlows() {
+        if (_dungeonLoadPromise) return _dungeonLoadPromise;
+        _dungeonLoadPromise = Promise.all(Dungeons.map(function (d) {
+            return GetDungeonFlowAsync(d.name).catch(function () { });
+        }));
+        return _dungeonLoadPromise;
+    }
+    // 立即开始预加载（不阻塞后续代码）
+    preloadAllDungeonFlows();
 
     // params: name subtype
     const AutoDungeonName = function (params) {
@@ -3401,7 +3570,7 @@
                 totalName = `${name}(困难)`;
                 if (GetDungeonFlow(totalName) != null) {
                     return totalName;
-                };
+                }
                 break;
             case '2':
                 totalName = `${name}(组队)`;
@@ -3421,11 +3590,16 @@
             if (name == null) {
                 Message.append('暂不支持次副本哦，欢迎到论坛分享此副本流程。');
             } else {
-                const source = GetDungeonSource(name);
-                return new Promise(resolve => {
-                    const p = new Performer(`自动副本-${name}`, source);
+                return new Promise(async function (resolve) {
+                    var source = await GetDungeonSourceAsync(name);
+                    if (source == null) {
+                        Message.append('<ord>副本流程加载失败，请检查网络或刷新页面重试。</ord>');
+                        resolve();
+                        return;
+                    }
+                    const p = new Performer('自动副本-' + name, source);
                     p.log(true);
-                    p.start(_ => {
+                    p.start(function () {
                         resolve();
                     });
                 });
@@ -3440,6 +3614,71 @@
             return null;
         }
         const result = `
+[if] (_DungeonHpThreshold) == null
+    ($_DungeonHpThreshold) = 50
+[if] (_DungeonWaitSkillCD) == null
+    ($_DungeonWaitSkillCD) = 打开
+[if] (_DungeonBagCleanWay) == null
+    ($_DungeonBagCleanWay) = 存仓及售卖
+[if] (_DungeonRecordGains) == null
+    ($_DungeonRecordGains) = 是
+#select ($_DungeonHpThreshold) = 副本内疗伤，当气血低于百分比,100|90|80|70|60|50|40|30|20|10,(_DungeonHpThreshold)
+#select ($_DungeonWaitSkillCD) = Boss战前等待技能冷却,打开|关闭,(_DungeonWaitSkillCD)
+#select ($_DungeonBagCleanWay) = 背包清理方案,不清理|售卖|存仓及售卖,(_DungeonBagCleanWay)
+#select ($_DungeonRecordGains) = 结束后显示收益统计,是|否,(_DungeonRecordGains)
+#input ($_repeat) = 重复次数,1
+#config
+[if] (arg0) != null
+    ($_DungeonHpThreshold) = (arg0)
+[if] (arg1) != null
+    ($_DungeonWaitSkillCD) = (arg1)
+[if] (arg2) != null
+    ($_DungeonBagCleanWay) = (arg2)
+[if] (arg3) != null
+    ($_repeat) = (arg3)
+stopstate
+<---
+[if] (_DungeonHpThreshold) == null
+    ($_DungeonHpThreshold) = 50
+($hpPer) = (_DungeonHpThreshold)/100
+[if] (:hpPer) < (hpPer)
+    @liaoshang
+--->
+[if] (_DungeonRecordGains) == 是
+    <-recordGains
+($_i) = 0
+[if] (_repeat) == null
+    ($_repeat) = 1
+[while] (_i) < (_repeat)
+    @renew
+    [if] (_DungeonBagCleanWay) == 售卖
+        @cleanBag
+    [else if] (_DungeonBagCleanWay) == 存仓及售卖
+        @tidyBag
+${SourceCodeHelper.appendHeader("    ", source)}
+    cr;cr over
+    ($_i) = (_i) + 1
+[if] (_DungeonBagCleanWay) == 售卖
+    @cleanBag
+[else if] (_DungeonBagCleanWay) == 存仓及售卖
+    @tidyBag
+$to 住房-练功房;dazuo
+[if] (_DungeonRecordGains) == 是
+    recordGains->
+`
+        return result;
+    }
+
+    // 异步版本：如果缓存未命中，从外部文件加载
+    async function GetDungeonSourceAsync(name) {
+        var source = GetDungeonFlow(name);
+        if (source == null) {
+            source = await GetDungeonFlowAsync(name);
+        }
+        if (source == null) {
+            return null;
+        }
+        var result = `
 [if] (_DungeonHpThreshold) == null
     ($_DungeonHpThreshold) = 50
 [if] (_DungeonWaitSkillCD) == null
@@ -4235,6 +4474,7 @@ $to 住房-练功房;dazuo
             { label: "@until", detail: "until condition - 等待条件成立", insert: "@until " },
             { label: "@wait", detail: "wait ms - 等待毫秒", insert: "@wait " },
             { label: "@xy", detail: "xy coord - 等待场景坐标", insert: "@xy " },
+            { label: "@zmlwait", detail: "zmlwait name - 阻塞执行自命令", insert: "@zmlwait " },
         ],
         // #directives
         dirs: [
@@ -4273,6 +4513,9 @@ $to 住房-练功房;dazuo
             { label: "(:weapon)", detail: "武器类型", insert: "(:weapon)" },
             { label: "(:target)", detail: "当前目标", insert: "(:target)" },
             { label: "(:free)", detail: "是否空闲", insert: "(:free)" },
+            { label: "(:gains)", detail: "当前收益数据", insert: "(:gains)" },
+            { label: "(:idle)", detail: "是否发呆(超过30秒无操作)", insert: "(:idle)" },
+            { label: "(:idle_time)", detail: "发呆持续时间(秒)", insert: "(:idle_time)" },
             { label: "(:date)", detail: "当前日期(日)", insert: "(:date)" },
             { label: "(:day)", detail: "星期几(0-6)", insert: "(:day)" },
             { label: "(:hour)", detail: "当前小时", insert: "(:hour)" },
@@ -4285,6 +4528,7 @@ $to 住房-练功房;dazuo
             { label: "(content)", detail: "事件关键词(触发)", insert: "(content)" },
             { label: "(grade)", detail: "事件等级(触发)", insert: "(grade)" },
             { label: "(times)", detail: "持续时间戳(触发)", insert: "(times)" },
+            { label: "(_lastGains)", detail: "上次结算收益(持久化)", insert: "(_lastGains)" },
         ],
         // Get all suggestions as a flat array
         getAll: function () {
@@ -5614,8 +5858,8 @@ $to 住房-练功房;dazuo
                     return { items: Dungeons };
                 },
                 methods: {
-                    run: function (item) {
-                        ManagedPerformerCenter.start(`自动副本-${item.name}`, GetDungeonSource(item.name));
+                    run: async function (item) {
+                        ManagedPerformerCenter.start('自动副本-' + item.name, await GetDungeonSourceAsync(item.name));
                     }
                 }
             });
@@ -6054,1229 +6298,43 @@ $to 住房-练功房;dazuo
     })();
 
     const DungeonsShortcuts = {
-        extension_sdyt: function () {
-            let source = `
-                [if] (:room 副本区域,忧愁谷)==true || (:state)==推演 || (:state)==领悟
-                @print <ord>当前状态无法进行一键咸鱼，自动停止！</ord>
-                [exit]
-                @print 🐟 一键咸鱼 => <hic>扫荡妖塔</hic>
-                @print <hic>如果想自己静默式调用扫荡妖塔功能，请先设定变量扫荡次数 <hiy>SDYTnum</hiy> 和 单次消耗精力上限 <hiy>SDYTjlsx</hiy> 的值。</hic>
-                [if] (SDYTjlsx) == 0 || (SDYTjlsx) == null || (SDYTjlsx) == undefined
-                @js ($SDYTjlsx) = prompt("请输入单次消耗精力上限，超过后将自动停止：", "85");
-                [if] (SDYTnum) == 0 || (SDYTnum) == null || (SDYTnum) == undefined
-                @js ($SDYTnum) = prompt("请输入本轮扫荡次数，注意：单次消耗精力达到上限后将自动停止。","5")
-                ($sdyt_num) = (SDYTnum)
-                //($SDYTnum) = null
-                [if] (sdyt_num) == 0 || (sdyt_num) == null || (sdyt_num) == undefined
-                @print <ord>扫荡次数为0，取消扫荡。</ord>
-                [exit]
-                @print <hiy>计划扫荡(sdyt_num)次妖塔。</hiy>
-                stopstate
-                [if] (:room) != 古大陆-墓园
-                $goyt
-                @await 1500
-                [if] (:room) != 古大陆-墓园
-                @print <ord>无法前往古大陆，请重试或确定当前角色是否已解锁古大陆。</ord>
-                $zdwk
-                [exit]
-                [if] {b扫荡符#}? < (sdyt_num) || {b扫荡符}? == null
-                shop 0 (sdyt_num)
-                ($num) = 0
-                @cmdDelay 500
-                ($ytWeek) = null
-                [while] (num) < (sdyt_num)
-                ss muyuan
-                @tip 你即将消耗一个扫荡符，($jl_yt)精力快速完成一次弑妖塔|你即将消耗($jl_yt)精力快速完成一次弑妖塔|你尚未($ytJS)弑妖塔|你已达到($ytWeek)上限
-                [if] (ytJS) != null
-                    @print <hiy>妖塔未解锁，无法扫荡。</hiy>
-                    [break]
-                [if] (ytWeek) != null
-                    @print <hiy>妖塔扫荡已达到本周上限。</hiy>
-                    [break]
-                [if] (jl_yt) > (SDYTjlsx) && (jl_yt) != null
-                    @print <ord>单次扫荡精力超过(SDYTjlsx)，自动停止。</ord>
-                    [break]
-                [else]
-                    saodang muyuan
-                    @tip 你消耗一个扫荡符|精力快速完成弑妖塔|你的($lack)不够|你已达到($ytWeek)上限
-                    [if] (ytWeek) != null
-                    @print <hiy>妖塔扫荡已达到本周上限。</hiy>
-                    [break]
-                    [if] (lack) != null
-                    @print <ord>(lack)不足，自动停止扫荡妖塔。</ord>
-                    [break]
-                ($num) = (num) + 1
-                @await 1000
-                $zdwk
-            `
+        extension_sdyt: async function () {
+            var source = await loadFlowFile('sdyt.txt');
             const p = new Performer("扫荡妖塔", source);
             p.log(false);
             p.start();
         },
         extension_yjyt: async function () {
-            let source = `
-                jh fam 9 start;go enter;go up;
-                @await 1000;
-                ggdl {r疯癫的老头}?;
-                go north[4];
-                @await 250;
-                go north[2];look shi;tiao1 shi;tiao3 shi;
-                @await 250;
-                tiao1 shi;tiao3 shi;tiao2 shi;go north;"
-            `
+            var source = await loadFlowFile('yjyt.txt');
             const p = new Performer("一键妖塔", source);
             p.log(false);
             p.start();
            },
-        extension_setting: function () {
-            let source = `
-                [(SDYTjlsx)==null]($SDYTjlsx)=85
-                [(SDYTnum)==null]($SDYTnum)=5
-                @print 🐟 一键咸鱼 => <hic>参数设置</hic>
-                #input ($SDYTjlsx)=<hiz>一键设置各种常用流程（陆续更新添加）参数</hiz><br/>&nbsp*&nbsp<ord>🐉 扫荡妖塔</ord> 参数<br/>&nbsp*&nbsp妖塔单次消耗精力上限,(SDYTjlsx)
-                #input ($SDYTnum)=每轮妖塔扫荡次数,(SDYTnum)
-                #config
-                @print 已完成参数设置
-            `
+        extension_setting: async function () {
+            var source = await loadFlowFile('setting.txt');
             const p = new Performer("参数设置", source);
             p.log(false);
             p.start();
         },
-        extension_cihang: function () {
-            let source = `
-[if] (:room 慈航静斋) == false
-    @print <hiy>请先进入慈航副本再运行。</hiy>
-    [exit]
-[else]
-    [if] (:room) != 慈航静斋-山门(副本区域) && (:room) != 慈航静斋-帝踏峰(副本区域)
-        @print <hiy>请在山门或帝踏峰运行。</hiy>
-        [exit]
-($go) = 'east','west','south','north'
-($qiku) = '老','病','死','爱别离','怨憎会','求不得'
-($num1) = 0
-[if] (:room) == 慈航静斋-山门(副本区域)
-    go south
-[else if] (:room) == 慈航静斋-帝踏峰(副本区域)
-    go south[2]
-@print <hiy>开始自动寻路，寻路期间请勿点击地图……</hiy>
-@cmdDelay 500
-[while] (num1) < 6
-    @js ($ku) = [(qiku)][(num1)]
-    ($num2) = 0
-    [while] true
-        [if] (map) != null && (retry) == true
-            (map)
-            @await 500
-        @js ($fx) = [(go)][(num2)]
-        [if] (fx) == null
-            @print <hiy>自动寻路失败，请回到山门重新运行！</hiy>
-            [exit]
-        go (fx)
-        [if] (:room) == 慈航静斋-七重门(副本区域)
-            @js ($ku_now) = $(".room_desc").text().match("，是名([^%]+)苦。")[1]
-            [if] (ku) != (ku_now)
-                [while] true
-                    go west
-                    [if] (:room) == 慈航静斋-七重门(副本区域)
-                        @js ($dir_gc) = $("text:contains('广场')").attr("dir")
-                    [if] (dir_gc) == south
-                        go south
-                    @await 200
-                    [if] (:room) == 慈航静斋-山门(副本区域)
-                        [break]
-                    [else if] (:room) == 慈航静斋-广场(副本区域)
-                        @print <hiy>已走出七重门！</hiy>
-                        [exit]
-                go south
-                ($num2) = (num2) + 1
-                ($retry) = true
-            [else]
-                [if] (map) == null
-                    ($map) = go (fx)
-                [else]
-                    ($map) = (map);go (fx)
-                ($retry) = false
-                [break]
-        [else if] (:room) == 慈航静斋-广场(副本区域)
-            @print <hiy>已走出七重门！</hiy>
-            [exit]
-    ($num1) = (num1) + 1
-go south
-[if] (:room) == 慈航静斋-广场(副本区域)
-    @print <hiy>已走出七重门！</hiy>
-            `
+        extension_cihang: async function () {
+            var source = await loadFlowFile('cihang.txt');
             const p = new Performer("慈航七重门", source);
             p.log(false);
             p.start();
         },
-        extension_zhanshendian: function () {
-            let source = `[if] (:room 战神殿) == false
-    @print <hiy>请先进入战神殿副本再运行。</hiy>
-    [exit]
-[if] (:room) != 战神殿-左雁翼(副本区域)
-    @print <hiy>请先手动向左走到左雁翼。</hiy>
-@until (:room) == 战神殿-左雁翼(副本区域)
-look shi
-@tip 和外面星空星宿位置一一对应，($star_0)，($star_1)，($star_2)，($star_3)，($star_4)，($star_5)，($star_6)，($star_7)这些星宿依次闪烁
-($stars) = "(star_0)","(star_1)","(star_2)","(star_3)","(star_4)","(star_5)","(star_6)","(star_7)"
-($dirs) = {"star":"角亢室","dir":1,"eswn":"东北↗︎","go":"northeast"},{"star":"氏房心","dir":0,"eswn":"东→","go":"east"},{"star":"尾箕轸","dir":2,"eswn":"东南↘︎","go":"southeast"},{"star":"井鬼参","dir":4,"eswn":"西南↙︎","go":"southwest"},{"star":"柳星张翼","dir":3,"eswn":"南↓","go":"south"},{"star":"奎娄斗牛","dir":6,"eswn":"西北↖︎","go":"northwest"},{"star":"胃昴毕觜","dir":5,"eswn":"西←","go":"west"},{"star":"女虚危壁","dir":7,"eswn":"北↑","go":"north"}
-@cmdDelay 100
-($num_1) = 0
-[while] (num_1) < 8
-    @js ($star) = [(stars)][(num_1)]
-    ($num_2) = 0
-    [while] (num_2) < 28
-        ($dir) = null
-        @js ($dir) = var d=[(dirs)];var s=d[(num_2)]["star"].indexOf("(star)");if(s>=0){d[(num_2)]["dir"]}
-        [if] (dir) != null
-            [break]
-        ($num_2) = (num_2) + 1
-    push (dir)
-    ($num_1) = (num_1) + 1
-look shi
-@tip 殿顶的星图依旧，却仅剩一颗($last)宿星孤零零的闪烁着
-($num_3) = 0
-[while] (num_3) < 28
-    ($dir_l) = null
-    ($go_l) = null
-    @js ($dir_l) = var d=[(dirs)];var s=d[(num_3)]["star"].indexOf("(last)");if(s>=0){d[(num_3)]["eswn"]}
-    @js ($go_l) = var d=[(dirs)];var s=d[(num_3)]["star"].indexOf("(last)");if(s>=0){d[(num_3)]["go"]}
-    [if] (dir_l) != null && (go_l) != null
-        [break]
-    ($num_3) = (num_3) + 1
-@print <hiy>(last)宿，最后一个方位是【(dir_l)】</hiy>
-tm (last)宿，最后一个方位是【(dir_l)】60秒倒计时已开始，请抓紧开打。
-@print <ord>打完右雁翼最后一波守卫后会自动进秘道【(go_l)】</ord>
-@until (:room) == 战神殿-右雁翼(副本区域) || (:room 副本区域) == false
-@until (:combating) == true || (:room 副本区域) == false
-@until (:combating) == false || (:room 副本区域) == false
-[if] (:room 副本区域) == false
-    [exit]
-[while] (:room) == 战神殿-右雁翼(副本区域) && (:living) == true
-    go (go_l);$wait 100
-            \`
+        extension_zhanshendian: async function () {
+            var source = await loadFlowFile('zhanshendian.txt');
             const p = new Performer("战神殿解谜", source);
             p.log(false);
             p.start();
         },
-        extension_guzongmen: function () {
-            let source = \`
-@print <hiy>如果寻路一直失败，请检查设置中<ord>【切换房间时不清空上房间信息】</ord>是否开启。</hiy>
-[if] (:room 副本区域,忧愁谷) == true
-    @print <ord>当前处于副本中，无法寻路！</ord>
-    [exit]
-@cmdDelay 500
-stopstate
-jh fam 9 start
-go enter
-go up
-@tip 打败我，你就($pass)上去|聚魂成功|踏过长生门|你已堪破生死|古老的大陆寻找真相|你连($pass)都没聚合|你想($pass)为神吗
-[if] (pass) != null
-    @print <ord>不符合前往古大陆要求，流程终止。</ord>
-    [exit]
-ggdl {r疯癫的老头}
-go north[3]
-go north[3]
-look shi
-tiao1 shi;tiao1 shi;tiao2 shi
-@until (:room) == 古大陆-断山
-@js ($ylfx) = $(".room_desc").text().match(/[东南西北]，/g)
-@js ($ylfx) = var f="(ylfx)";f.replace(/，/g,"")
-@js ($ylfx) = var f="(ylfx)";f.replace(/东/g,"west")
-@js ($ylfx) = var f="(ylfx)";f.replace(/西/g,"east")
-@js ($ylfx) = var f="(ylfx)";f.replace(/南/g,"north")
-@js ($ylfx) = var f="(ylfx)";f.replace(/北/g,"south")
-@js ($ylfx) = var f="(ylfx)";f.replace(/,/g,"','")
-@js ($ylfx) = var f=['(ylfx)'];f.reverse()
-@js ($ylfx) = var f="(ylfx)";f.replace(/,/g,"','")
-@js ($ylfx) = "'"+"(ylfx)"+"'"
-@js ($fl) = [(ylfx)].length
-go down
-go south[3]
-go south[2]
-go west
-($go) = 'east','west','south','north'
-($num) = 0
-[while] (num) < 4
-    @await 500
-    @js $(".content-message pre").html("");
-    @await 500
-    @js ($fx1) = [(go)][(num)]
-    go (fx1)
-    @js ($lost) = $(".content-message").text().match("你似乎迷路了")
-    [if] (lost) != null
-        go south[3]
-        go south[3]
-        go west
-        ($num) = (num) + 1
-    [else]
-        [break]
-[if] (fl) == 5
-    ($num) = 0
-    [while] (num) < 5
-        @js ($fx) = [(ylfx)][(num)]
-        go (fx)
-        ($num) = (num) + 1
-[else if] (fl) == 4
-    @js ($fx2) = [(ylfx)][0]
-    @js ($fx3) = [(ylfx)][1]
-    @js ($fx4) = [(ylfx)][2]
-    @js ($fx5) = [(ylfx)][3]
-    ($lxjh) = {"lx":"go (fx2);go (fx3);go (fx4);go (fx5);go (fx5)"},{"lx":"go (fx2);go (fx3);go (fx4);go (fx4);go (fx5)"},{"lx":"go (fx2);go (fx3);go (fx3);go (fx4);go (fx5)"},{"lx":"go (fx2);go (fx2);go (fx3);go (fx4);go (fx5)"}
-[else if] (fl) == 3
-    @js ($fx2) = [(ylfx)][0]
-    @js ($fx3) = [(ylfx)][1]
-    @js ($fx4) = [(ylfx)][2]
-    ($lxjh) = {"lx":"go (fx2);go (fx3);go (fx4);go (fx4);go (fx4)"},{"lx":"go (fx2);go (fx3);go (fx3);go (fx3);go (fx4)"},{"lx":"go (fx2);go (fx2);go (fx2);go (fx3);go (fx4)"},{"lx":"go (fx2);go (fx3);go (fx3);go (fx4);go (fx4)"},{"lx":"go (fx2);go (fx2);go (fx3);go (fx4);go (fx4)"},{"lx":"go (fx2);go (fx2);go (fx3);go (fx3);go (fx4)"}
-[else if] (fl) == 2
-    @js ($fx2) = [(ylfx)][0]
-    @js ($fx3) = [(ylfx)][1]
-    ($lxjh) = {"lx":"go (fx2);go (fx3);go (fx3);go (fx3);go (fx3)"},{"lx":"go (fx2);go (fx2);go (fx3);go (fx3);go (fx3)"},{"lx":"go (fx2);go (fx2);go (fx2);go (fx3);go (fx3)"},{"lx":"go (fx2);go (fx2);go (fx2);go (fx2);go (fx3)"}
-[else if] (fl) == 1
-    @js ($fx2) = [(ylfx)][0]
-    ($lxjh) = {"lx":"go (fx2);go (fx2);go (fx2);go (fx2);go (fx2)"}
-[if] (fl) < 5
-    @js ($fxlen) = [(lxjh)].length
-    ($num) = 0
-    [while] (num) < (fxlen)
-        @js ($map) = var f=[(lxjh)];f[(num)]["lx"]
-        (map)
-        [if] (:room) != 古大陆-药林
-            [while] (:room) != 古大陆-平原
-                go south
-                @await 350
-            go north;go west
-            go (fx1)
-            ($num) = (num) + 1
-        [else]
-            [break]
-tiao bush
-[if] (:room) == 古大陆-山脚
-    @print <ord>古宗门自动寻路已完成！</ord>
-[else]
-    @print <ord>寻路失败，请重新运行或换个时间。</ord>
-            `
+        extension_guzongmen: async function () {
+            var source = await loadFlowFile('guzongmen.txt');
             const p = new Performer("古宗门寻路", source);
             p.log(false);
             p.start();
         },
     };
-
-    const Dungeons = [
-        {
-            name: "华山论剑",
-            source: `
-@print 👑 感谢 koyodakla、freesunny 对此副本代码提供的帮助。
-jh fb 30 start1;cr huashan/lunjian/leitaixia
-[if] (_DungeonWaitSkillCD) == 打开
-    @cd
-go up
-@tip 恭喜你战胜了五绝
-@wait 1000
-jump bi
-get all from {r五绝宝箱}`
-        },
-        {
-            name: "光明顶(组队)",
-            source: `
-@print 👑 感谢 dtooboss 分享此副本代码。
-jh fb 26 start3;cr mj/shanmen 2 0
-go north;go west;go northwest
-@kill 冷谦
-go north
-@kill 张中
-go north
-@kill 周颠
-go north;go north
-@kill 颜垣
-go east
-@kill 唐洋
-go north
-@kill 辛然
-go west;go west
-@kill 庄铮
-go south
-@kill 闻苍松
-go east;go south
-@kill 说不得,彭莹玉
-[if] (_DungeonWaitSkillCD) == 打开
-    @cd
-go north[2]
-@kill 韦一笑,殷天正
-[if] (_DungeonWaitSkillCD) == 打开
-    @cd
-go north[2]
-@kill 张无忌,杨逍,范遥`
-        },
-        {
-            name: "光明顶",
-            source: `
-@print 👑 感谢 dtooboss 分享此副本代码。
-jh fb 26 start1;cr mj/shanmen
-go north;go west;go northwest
-@kill 冷谦
-go north
-@kill 张中
-go north
-@kill 周颠
-go north;go north
-@kill 颜垣
-go east
-@kill 唐洋
-go north
-@kill 辛然
-go west;go west
-@kill 庄铮
-go south
-@kill 闻苍松
-go east;go south
-@kill 说不得,彭莹玉
-[if] (_DungeonWaitSkillCD) == 打开
-    @cd
-go north[2]
-@kill 韦一笑,殷天正
-[if] (_DungeonWaitSkillCD) == 打开
-    @cd
-go north[2]
-@kill 张无忌,杨逍,范遥`
-        },
-        {
-            name: "燕子坞(困难)",
-            source: `
-jh fb 23 start2;cr murong/anbian 1 0
-go east;go east
-@kill 包不同
-go east;go south;go east;go south;go south
-@kill 王夫人
-go north;go north;go west;go north
-[if] (_DungeonWaitSkillCD) == 打开
-    @cd
-go east;go east;go east
-@kill 慕容复
-go west;go north
-look pai;bai pai[3]
-go north;search
-[if] (_DungeonWaitSkillCD) == 打开
-    @cd
-go south
-@kill 慕容博
-go east
-@kill 阿朱`
-        },
-        {
-            name: "燕子坞(简单)",
-            source: `
-jh fb 23 start1;cr murong/anbian
-go east;go east
-@kill 包不同
-go east;go south;go east;go south;go south
-@kill 王夫人
-go north;go north;go west;go north
-[if] (_DungeonWaitSkillCD) == 打开
-    @cd
-go east;go east;go east
-@kill 慕容复
-go west;go north
-look pai;bai pai[3]
-go north;search
-[if] (_DungeonWaitSkillCD) == 打开
-    @cd
-go south
-@kill 慕容博
-go east
-@kill 阿朱`
-        },
-        {
-            name: "燕子坞(偷书)",
-            source: `
-@print 👑 感谢 Airson 分享此副本代码。
-jh fb 23 start1;cr murong/anbian
-go east;go east
-@kill 包不同
-go east;go east;go east;go north
-look pai;bai pai[3]
-go north;search`
-        },
-        {
-            name: "移花宫(困难)",
-            source: `
-jh fb 22 start2;cr huashan/yihua/shandao 1 0
-go south[5]
-go south[5]
-go south[5]
-@kill 花月奴
-go south;go south
-@kill 移花宫女弟子,移花宫女弟子
-($id) = {移花宫女弟子}
-[if] (:exist (id)) == true
-    $killw 移花宫女弟子
-go south
-@kill 移花宫女弟子,移花宫女弟子
-($id) = {移花宫女弟子}
-[if] (:exist (id)) == true
-    $killw 移花宫女弟子
-[if] (_DungeonWaitSkillCD) == 打开
-    @cd
-go southeast
-@kill 涟星
-[if] {r邀月}? != null
-    @kill 邀月
-[if] {邀月的尸体}? == null
-    [if] (_DungeonWaitSkillCD) == 打开
-        @cd
-go northwest;go southwest
-[if] {r邀月}? != null
-    @kill 邀月
-[if] {b火折子g}? != null
-    look hua
-    @tip 你数了下大概有($number)朵花
-    go southeast
-    look bed;pushstart bed
-    pushleft bed[(number)]
-    @await 1000
-    pushright bed[8]
-    @await 1000
-    go down;fire;go west
-    @kill 花无缺
-    look xia;open xia`
-        },
-        {
-            name: "移花宫(简单)",
-            source: `
-jh fb 22 start1;cr huashan/yihua/shandao
-go south[5]
-go south[5]
-go south[5]
-@kill 花月奴
-go south;go south
-@kill 移花宫女弟子,移花宫女弟子
-go south
-@kill 移花宫女弟子,移花宫女弟子
-[if] (_DungeonWaitSkillCD) == 打开
-    @cd
-go southeast
-@kill 涟星
-[if] (_DungeonWaitSkillCD) == 打开
-    @cd
-go northwest;go southwest
-@kill 邀月
-//[if] {b火折子g}? != null
-[if] 1 == 1
-    look hua
-    @tip 你数了下大概有($number)朵花
-    go southeast
-    look bed;pushstart bed
-    pushleft bed[(number)]
-    @await 1000
-    pushright bed[8]
-    @await 1000
-    go down;fire;go west
-    @kill 花无缺
-    look xia;open xia`
-
-
-        },
-        {
-            name: "冰火岛(困难)",
-            source: `
-@print 👑 感谢 WanJiaQi 分享此副本代码。
-jh fb 21 start2;cr mj/bhd/haibian 1 0
-go west
-@kill 炎龙
-go west
-@kill 炎龙
-go west
-@kill 炎龙王
-@liaoshang
-go west;search
-@tip 你找到了
-go east[4];go north
-@kill 白熊
-go north
-@kill 白熊
-@liaoshang
-go north;go west;zuan dong
-[if] (_DungeonWaitSkillCD) == 打开
-    @cd
-@kill 张翠山
-@kill 谢逊`
-        },
-        {
-            name: "冰火岛(简单)",
-            source: `
-@print 👑 感谢 WanJiaQi 分享此副本代码。
-jh fb 21 start1;cr mj/bhd/haibian 0 0
-go west
-@kill 炎龙
-go west
-@kill 炎龙
-go west
-@kill 炎龙王
-@liaoshang
-//go west;search
-//@tip 你找到了
-go east[3];go north
-@kill 白熊
-go north
-@kill 白熊
-@liaoshang
-go north;go west;zuan dong
-[if] (_DungeonWaitSkillCD) == 打开
-    @cd
-@kill 谢逊`
-        },
-        {
-            name: "星宿海",
-            source: `
-jh fb 20 start1;cr xingxiu/xxh6
-go northeast
-@kill 星宿派
-go north
-@kill 星宿派
-go northwest
-@kill 星宿派
-go southwest
-@kill 星宿派
-go south
-@kill 星宿派
-[if] (_DungeonWaitSkillCD) == 打开
-    @cd
-go north;go northeast;go north
-@kill 丁春秋`
-        },
-        {
-            name: "白驼山",
-            source: `
-jh fb 19 start1;cr baituo/damen
-[if] (_DungeonWaitSkillCD) == 打开
-    @cd
-go north[4]
-@kill 欧阳锋
-[if] (_DungeonWaitSkillCD) == 打开
-    @cd
-go south
-@kill 欧阳克,白衣少女
-go south[2];go west[3]
-@kill 毒蛇
-go north
-@kill 毒蛇
-go north;go north
-@kill 蟒蛇`
-        },
-        {
-            name: "白驼山(组队)",
-            source: `
-jh fb 19 start3;cr baituo/damen 2 0
-[if] (_DungeonWaitSkillCD) == 打开
-    @cd
-go north[4]
-@kill 欧阳锋
-[if] (_DungeonWaitSkillCD) == 打开
-    @cd
-go south
-@kill 欧阳克,白衣少女
-go south[2];go west[3]
-@kill 毒蛇
-go north
-@kill 毒蛇
-go north;go north
-@kill 蟒蛇`
-        },
-        {
-            name: "桃花岛(困难)",
-            source: `
-jh fb 18 start2;cr taohua/haitan 1 0
-@until (:path) == taohua/haitan
-@taohualin
-@wait 1000
-go south
-@kill 陆乘风
-go east;go east
-@kill 曲灵风
-[if] (_DungeonWaitSkillCD) == 打开
-    @cd
-go east;go east
-@kill 黄药师
-go west;go north
-@kill 黄蓉`
-        },
-        {
-            name: "桃花岛(简单)",
-            source: `
-jh fb 18 start1;cr taohua/haitan
-@until (:path) == taohua/haitan
-@taohualin
-@wait 1000
-go south
-@kill 陆乘风
-go east;go east
-@kill 曲灵风
-go east;go north
-ok {黄蓉}
-@zhoubotong
-@kill 周伯通
-look xia;search xia
-go east[2]
-go northwest;go southeast;go southeast;go northwest
-go southwest;go northeast;go northeast;go southwest
-@until (:path) == taohua/haitan
-@taohualin
-@wait 2000
-go south;go east
-go east;go east;go north
-select {黄蓉};give1 {黄蓉}
-@kill 黄蓉`
-        },
-        {
-            name: "云梦沼泽(组队)",
-            source: `
-@print 👑 感谢 leiyulin 分享此副本代码。
-jh fb 17 start3;cr cd/yunmeng/senlin 2 0
-$wait 500
-go east
-@kill 巨鳄
-go north
-@kill 巨鳄,巨鳄
-go east
-@kill 巨鳄,巨鳄
-go west;go north
-@kill 巨鳄,巨鳄
-look lu;kan lu;go north
-@kill 火龙
-go north
-@kill 火龙
-go north
-@kill 火龙
-[if] (_DungeonWaitSkillCD) == 打开
-    @cd
-go north
-@kill 火龙王`
-        },
-        {
-            name: "云梦沼泽",
-            source: `
-@print 👑 感谢 leiyulin 分享此副本代码。
-jh fb 17 start1;cr cd/yunmeng/senlin
-$wait 500
-go east
-@kill 巨鳄
-go north
-@kill 巨鳄,巨鳄
-go east
-@kill 巨鳄,巨鳄
-go west;go north
-@kill 巨鳄,巨鳄
-look lu;kan lu;go north
-@kill 火龙
-go north
-@kill 火龙
-go north
-@kill 火龙
-[if] (_DungeonWaitSkillCD) == 打开
-    @cd
-go north
-@kill 火龙王`
-        },
-        {
-            name: "嵩山",
-            source: `
-jh fb 16 start1;cr wuyue/songshan/taishi
-[if] (_DungeonWaitSkillCD) == 打开
-    @cd
-go north[2]
-@kill 十三太保
-[if] (_DungeonWaitSkillCD) == 打开
-    @cd
-go northup;go northeast;go northup[2]
-@kill 十三太保,十三太保
-[if] (_DungeonWaitSkillCD) == 打开
-    @cd
-go northup;go north
-@kill 十三太保,十三太保,十三太保
-[if] (_DungeonWaitSkillCD) == 打开
-    @cd
-go north
-@kill 十三太保,十三太保,十三太保,十三太保
-[if] (_DungeonWaitSkillCD) == 打开
-    @cd
-go north
-@kill 左冷禅`
-        },
-        {
-            name: "泰山",
-            source: `
-jh fb 15 start1;cr wuyue/taishan/daizong
-go northup[2]
-@kill 玉磬子
-go northup[2]
-@kill 玉音子
-go northup[2]
-go northup[2]
-@kill 玉玑子`
-        },
-        {
-            name: "衡山",
-            source: `
-jh fb 14 start1;cr wuyue/henshan/hengyang
-go west;go north
-@kill 嵩山弟子,嵩山弟子
-go north;go north
-@kill 费彬
-@kill 史登达,丁勉
-@kill 刘正风
-go south[3];go west[2]
-@kill 曲洋,曲非烟
-go east[4];go southeast;go south;go east;go south
-@kill 莫大`
-        },
-        {
-            name: "青城山",
-            source: `
-@print 👑 感谢 矮大瓜 分享此副本代码。
-jh fb 13 start1;cr wuyue/qingcheng/shanlu
-go westup
-@kill 青城派弟子,青城派弟子
-go north
-go northup
-go eastup
-@kill 青城派弟子,青城派弟子
-go northup
-@kill 洪人雄
-go north[3]
-@kill 于人豪
-go north
-@kill 侯人英,罗人杰
-go south
-go east
-@kill 余人彦
-[if] (_DungeonWaitSkillCD) == 打开
-    @cd
-go north
-@kill 余沧海`
-        },
-        {
-            name: "恒山",
-            source: `
-@print 👑 感谢 .min-A 分享此副本代码。
-jh fb 12 start1;cr wuyue/hengshan/daziling
-go northup;go northwest;go northwest;go northup;go northup
-@kill 不戒和尚,仪琳,哑婆婆
-go north;go north
-@kill 定静师太,定闲师太,定仪师太
-
-($path)=(:path)
-[while] true
-    <---
-    @until (path)!=(:path)
-    ($path)=(:path)
-    ($guy) = {r采花大盗 田伯光}?
-    [if] (guy) != null
-        @kill 采花大盗 田伯光
-    [if] {田伯光的尸体}? != null
-        [break]
-    --->
-    go south
-    go west
-    go north
-    go south
-    go east
-    go east
-    go north
-    go south
-    go west
-    go south
-    go southdown
-    go east
-    go southeast
-    go northup
-    go southdown
-    go southeast
-    go southdown
-
-    go northup
-    go northwest
-    go northup
-    go southdown
-    go northwest
-    go northup
-    go northup
-    go north
-    go north`
-        },
-        {
-            name: "五毒教(组队)",
-            source: `
-@print 👑 感谢 矮大瓜 分享此副本代码。
-jh fb 11 start3;cr cd/wudu/damen 2 0
-@kill 五毒教徒,五毒教徒,五毒教徒,五毒教徒
-go east
-@kill 沙千里
-go south
-@kill 藏獒
-go west
-@kill 白髯老者
-go east
-go south
-@kill 毒郎中
-go north
-go north
-[if](_DungeonWaitSkillCD) == 打开
-    @cd
-go east
-@kill 潘秀达,岑其斯,齐云敖
-[if](_DungeonWaitSkillCD) == 打开
-    @cd
-go east
-@kill 何红药
-[if](_DungeonWaitSkillCD) == 打开
-    @cd
-go east
-@kill 何铁手`
-        },
-        {
-            name: "五毒教",
-            source: `
-@print 👑 感谢 矮大瓜 分享此副本代码。
-jh fb 11 start1;cr cd/wudu/damen
-@kill 五毒教徒,五毒教徒,五毒教徒,五毒教徒
-go east
-@kill 沙千里
-go south
-@kill 藏獒
-go west
-@kill 白髯老者
-go east
-go south
-@kill 毒郎中
-go north
-go north
-[if](_DungeonWaitSkillCD) == 打开
-    @cd
-go east
-@kill 潘秀达,岑其斯,齐云敖
-[if](_DungeonWaitSkillCD) == 打开
-    @cd
-go east
-@kill 何红药
-[if](_DungeonWaitSkillCD) == 打开
-    @cd
-go east
-@kill 何铁手`
-        },
-        {
-            name: "温府",
-            desc: "温府(2k+闪避)",
-            source: `
-@print 👑 感谢 JiaQi Wan 分享此副本代码。
-jh fb 10 start1;cr cd/wen/damen
-look tree;climb tree;go north;go northeast
-[while] true
-    [if] (:path) != cd/wen/zoulang4
-        go northeast
-    [else]
-        [break]
-go north[2];go northwest;go north
-look zhuang;tiao zhuang
-@kill 温方义,温方山,温方施,温方南
-[if] {r温家老大 温方达%}? != null
-    @kill 温方达
-@wait 2000
-[if] (_DungeonWaitSkillCD) == 打开
-    @cd
-look zhuang;tiao zhuang
-@until (:path) == cd/wen/xiaoyuan
-@wait 500
-[if] {r夏雪宜}? != null
-    @kill 夏雪宜
-go north
-@kill 温仪`
-        },
-        {
-            name: "关外",
-            source: `
-@print 👑 感谢 老实人 分享此副本代码。
-jh fb 9 start1;cr bj/guanwai/damen
-go northeast
-@kill 金雕
-go east
-@kill 金雕
-go southeast
-@kill 金雕
-go east
-@kill 平四
-go north
-select {r胡斐}
-ask {r胡斐} about 阎基
-@tip 胡斐说道：阎基是我的杀父仇人($chat)
-[if] (chat) == ，
-        give {r胡斐} {b阎基的头颅}
-        ask {r胡斐} about 胡家刀谱
-[if] (_DungeonWaitSkillCD) == 打开
-    @cd
-@kill 胡斐
-go south;go east
-@kill 东北虎
-go eastup
-@kill 东北虎
-go southup
-@kill 东北虎
-[if] (_DungeonWaitSkillCD) == 打开
-    @cd
-go eastup
-@kill 黑熊
-go westdown;go northdown;go west[2];go northwest
-go west;go southwest;go west
-give {r船夫} 10000 money
-@until (:room)==关外-船厂(副本区域)
-@wait 500
-@kill 船夫
-go south;go west[5];go north
-@kill 江湖医生 阎基`
-        },
-        {
-            name: "神龙教(组队)",
-            source: `
-jh fb 8 start3;cr bj/shenlong/haitan 2 0;go north
-@kill 毒蛇,竹叶青
-look bush;kan bush;go north
-@kill 毒蛇,竹叶青
-go north
-@kill 神龙教弟子,神龙教弟子
-go north
-@kill 神龙教军师 陆高轩
-go south;go east
-@kill 神龙教青龙使 许雪亭
-go east
-@kill 神龙教女弟子,神龙教女弟子
-go north[2]
-@kill 神龙教弟子,神龙教弟子
-[if] (_DungeonWaitSkillCD) == 打开
-    @cd
-go north
-@kill 洪安通,张淡月,无根道长`
-        },
-        {
-            name: "神龙教",
-            source: `
-jh fb 8 start1;cr bj/shenlong/haitan;go north
-@kill 毒蛇,竹叶青
-look bush;kan bush;go north
-@kill 毒蛇,竹叶青
-go north
-@kill 神龙教弟子,神龙教弟子
-go north
-@kill 神龙教军师 陆高轩
-go south;go east
-@kill 神龙教青龙使 许雪亭
-go east
-@kill 神龙教女弟子,神龙教女弟子
-go north[2]
-@kill 神龙教弟子,神龙教弟子
-[if] (_DungeonWaitSkillCD) == 打开
-    @cd
-go north
-@kill 洪安通,张淡月,无根道长`
-        },
-        {
-            name: "天地会",
-            source: `
-@print 👑 感谢 jicki 分享此副本代码，感谢 andyfos、mma1996 协助完成。
-jh fb 7 start1;cr bj/tdh/hct
-@kill 药铺伙计
-@kill 天地会青木堂护法 徐天川
-go west
-@kill 关夫子 关安基
-knock;knock;knock
-go down
-@until {r尸体}? != null
-go west[5]
-@until {r尸体}? != null
-go north
-@liaoshang
-[if] (_DungeonWaitSkillCD) == 打开
-    @cd
-@kill 陈近南
-go east
-get {r一}?
-@wait 500
-get {r一}?
-go west
-go north
-go east
-@tip 拔刀相助，贫尼感激不尽。
-@wait 1000
-select {r神尼};cha {r神尼}
-@wait 1000
-@kill 独臂神尼`
-        },
-        {
-            name: "鳌拜府",
-            source: `
-@print 👑 感谢 Jeaepan 分享此副本代码。
-jh fb 6 start1;cr bj/ao/damen
-@kill 官兵,官兵
-go west
-@kill 吴之荣
-go north
-@kill 厨师
-go south;go west
-@kill 家将,家将,女管家
-[if] (_DungeonWaitSkillCD) == 打开
-    @cd
-go west
-@kill 满洲第一勇士 鳌拜
-go east;go north
-look shu;open shu
-@tip 发现扉页的($pos)下角被鳌拜写了一个大大的杀字
-look hua
-$wait 500
-[if] (pos) == 左
-    tleft hua
-[if] (pos) == 右
-    $wait 500
-    tright hua
-go north
-select {r四十二章经g}?
-get {r四十二章经g}?
-go south;go south
-($open) = 没开
-look men;unlock men
-@tip 你用一把钥匙($open)了牢房门|你不会撬锁
-[if] (open) == 打开
-    go south
-    select {r庄允城}?
-    ask {r庄允城}? about 吴之荣
-    @kill 庄允城`
-        },
-        {
-            name: "庄府",
-            source: `
-@print 👑 感谢 qwer68588 分享此副本代码。
-jh fb 5 start1;cr bj/zhuang/xiaolu
-go north
-@kill 土匪
-go north
-look men;break men
-go north
-@kill 神龙教弟子,神龙教弟子
-go north
-@kill 神龙教弟子
-@kill 神龙教小头目 章老三
-go west
-@kill 神龙教弟子
-go east;go east
-@kill 神龙教弟子`
-        },
-        {
-            name: "兵营",
-            source: `
-@print 👑 感谢 qwer68588 分享此副本代码。
-jh fb 4 start1;cr yz/by/damen
-@kill 官兵,官兵
-$wait 1000
-@liaoshang
-[if] (_DungeonWaitSkillCD) == 打开
-    @cd
-go south
-@kill 官兵,官兵,官兵,武将,武将,史青山
-$wait 1000
-look men;open men
-go south;search`
-        },
-        {
-            name: "流氓巷(组队)",
-            source: `
-jh fb 2 start3;cr yz/lmw/xiangzi1 2 0
-@kill 小流氓,小流氓
-go east
-@kill 流氓,流氓
-go north
-@kill 流氓头,流氓,流氓
-go south;go east
-@kill 流氓,流氓
-go east
-@kill 流氓头领`
-        },
-        {
-            name: "流氓巷",
-            source: `
-jh fb 2 start1;cr yz/lmw/xiangzi1
-@kill 小流氓,小流氓
-go east
-@kill 流氓,流氓
-go north
-@kill 流氓头,流氓,流氓
-go south;go east
-@kill 流氓,流氓
-go east
-@kill 流氓头领`
-        },
-        {
-            name: "丽春院",
-            source: `
-jh fb 3 start1;cr yz/lcy/dating
-@kill 韦春芳
-go up
-@kill 龟公
-go west
-@kill 史松
-look tai;tui tai;go enter
-@kill 茅十八`
-        },
-        {
-            name: "财主家(困难)",
-            source: `
-jh fb 1 start2;cr yz/cuifu/caizhu 1 0
-@kill 大狼狗,大狼狗
-go north
-@kill 管家,家丁,家丁
-[if] (_DungeonWaitSkillCD) == 打开
-    @cd
-go north
-@kill 财主 崔员外
-($open) = 没开
-look men;open men
-@tip 你不会撬锁|钥匙($open)了秘门
-[if] (open) == 打开
-    go east
-    ok {丫鬟}
-    go west;go south;go south
-    ok {丫鬟}?
-    go north;go north;go west
-    select {财主女儿 崔莺莺};ask {财主女儿 崔莺莺} about 东厢
-[else]
-    go west
-@kill 财主女儿 崔莺莺
-[if] (open) == 打开
-    go east;go east;look gui;search gui`
-        },
-        {
-            name: "财主家(简单)",
-            source: `
-jh fb 1 start1;cr yz/cuifu/caizhu
-@kill 大狼狗,大狼狗
-go north
-@kill 管家,家丁,家丁
-[if] (_DungeonWaitSkillCD) == 打开
-    @cd
-go north
-@kill 财主 崔员外
-($open) = 没开
-look men;open men
-@tip 你不会撬锁|钥匙($open)了秘门
-[if] (open) == 打开
-    go east
-    ok {丫鬟}
-    go west;go south;go south
-    ok {丫鬟}?
-    go north;go north;go west
-    select {财主女儿 崔莺莺};ask {财主女儿 崔莺莺} about 东厢
-[else]
-    go west
-@kill 财主女儿 崔莺莺
-[if] (open) == 打开
-    go east;go east;look gui;search gui` }
-    ];
     /***********************************************************************************\
         Ready
     \***********************************************************************************/
@@ -7290,7 +6348,23 @@ look men;open men
         },
 
         existAutoDungeon: function (params) {
-            return AutoDungeonName(params) != null;
+            const parts = params.split(' ');
+            const name = parts[0];
+            const type = parts[1];
+            switch (type) {
+                case '0':
+                    // 先查精确名称，再回退到 name + "(简单)"（如"冰火岛"→"冰火岛(简单)"）
+                    if (Dungeons.some(function(d) { return d.name === name; })) {
+                        return true;
+                    }
+                    return Dungeons.some(function(d) { return d.name === name + '(简单)'; });
+                case '1':
+                    return Dungeons.some(function(d) { return d.name === name + '(困难)'; });
+                case '2':
+                    return Dungeons.some(function(d) { return d.name === name + '(组队)'; });
+                default:
+                    return false;
+            }
         },
 
         shareTrigger: function (triggerData) {
@@ -7300,14 +6374,14 @@ look men;open men
 
     $(document).ready(function () {
         __init__();
-        if (WG == undefined || WG == null) {
+        if (WG == undefined) {
             setTimeout(__init__, 300);
         }
     });
 
     function __init__() {
         WG = unsafeWindow.WG;
-        if (WG == undefined || WG == null) {
+        if (WG == undefined) {
             setTimeout(() => { __init__() }, 300);
             return;
         }
@@ -7322,6 +6396,7 @@ look men;open men
         unsafeWindow.highlightRaidSyntax = highlightRaidSyntax;
 
         Role.init();
+        __initIdleTimer();
         Room.init();
         SystemTips.init();
         MsgTips.init();

@@ -1,0 +1,52 @@
+[if] (:room 副本区域,忧愁谷)==true || (:state)==推演 || (:state)==领悟
+                @print <ord>当前状态无法进行一键咸鱼，自动停止！</ord>
+                [exit]
+                @print 🐟 一键咸鱼 => <hic>扫荡妖塔</hic>
+                @print <hic>如果想自己静默式调用扫荡妖塔功能，请先设定变量扫荡次数 <hiy>SDYTnum</hiy> 和 单次消耗精力上限 <hiy>SDYTjlsx</hiy> 的值。</hic>
+                [if] (SDYTjlsx) == 0 || (SDYTjlsx) == null || (SDYTjlsx) == undefined
+                @js ($SDYTjlsx) = prompt("请输入单次消耗精力上限，超过后将自动停止：", "85");
+                [if] (SDYTnum) == 0 || (SDYTnum) == null || (SDYTnum) == undefined
+                @js ($SDYTnum) = prompt("请输入本轮扫荡次数，注意：单次消耗精力达到上限后将自动停止。","5")
+                ($sdyt_num) = (SDYTnum)
+                //($SDYTnum) = null
+                [if] (sdyt_num) == 0 || (sdyt_num) == null || (sdyt_num) == undefined
+                @print <ord>扫荡次数为0，取消扫荡。</ord>
+                [exit]
+                @print <hiy>计划扫荡(sdyt_num)次妖塔。</hiy>
+                stopstate
+                [if] (:room) != 古大陆-墓园
+                $goyt
+                @await 1500
+                [if] (:room) != 古大陆-墓园
+                @print <ord>无法前往古大陆，请重试或确定当前角色是否已解锁古大陆。</ord>
+                $zdwk
+                [exit]
+                [if] {b扫荡符#}? < (sdyt_num) || {b扫荡符}? == null
+                shop 0 (sdyt_num)
+                ($num) = 0
+                @cmdDelay 500
+                ($ytWeek) = null
+                [while] (num) < (sdyt_num)
+                ss muyuan
+                @tip 你即将消耗一个扫荡符，($jl_yt)精力快速完成一次弑妖塔|你即将消耗($jl_yt)精力快速完成一次弑妖塔|你尚未($ytJS)弑妖塔|你已达到($ytWeek)上限
+                [if] (ytJS) != null
+                    @print <hiy>妖塔未解锁，无法扫荡。</hiy>
+                    [break]
+                [if] (ytWeek) != null
+                    @print <hiy>妖塔扫荡已达到本周上限。</hiy>
+                    [break]
+                [if] (jl_yt) > (SDYTjlsx) && (jl_yt) != null
+                    @print <ord>单次扫荡精力超过(SDYTjlsx)，自动停止。</ord>
+                    [break]
+                [else]
+                    saodang muyuan
+                    @tip 你消耗一个扫荡符|精力快速完成弑妖塔|你的($lack)不够|你已达到($ytWeek)上限
+                    [if] (ytWeek) != null
+                    @print <hiy>妖塔扫荡已达到本周上限。</hiy>
+                    [break]
+                    [if] (lack) != null
+                    @print <ord>(lack)不足，自动停止扫荡妖塔。</ord>
+                    [break]
+                ($num) = (num) + 1
+                @await 1000
+                $zdwk

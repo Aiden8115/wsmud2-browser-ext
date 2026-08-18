@@ -235,6 +235,7 @@ var UI = {
                 <option value="3"> 飞书机器人 </option>
                 <option value="4"> Qmsg私聊 </option>
                 <option value="5"> Qmsg群聊 </option>
+                <option value="6"> 企业微信机器人 </option>
             </select>
             </span></div> `
             + UI.html_lninput("pushToken", "推送方式对应的Token或Key(只要Key不要填整个网址)：")
@@ -251,9 +252,12 @@ var UI = {
             <div class="item-commands">
                 <span class="backup_btn">上传配置</span>
                 <span class="load_btn">下载配置</span>
+                <span class="restore_btn">一键恢复</span>
+                <span class="storage_report_btn">存储诊断</span>
+                <span class="clean_orphan_btn">清理孤儿键</span>
                 <span class="reset_default_btn" style="border-color:#e74c3c;color:#e74c3c;">恢复默认设置</span>
             </div>
-            <div class="setting-item" style="color:#888;font-size:12px;">上传/下载配置用于跨角色同步（含游戏自带拓展设置），恢复默认仅重置当前角色设置</div>`
+            <div class="setting-item" style="color:#888;font-size:12px;">每日自动备份已开启（登录后自动上传到云端），一键恢复从云端拉取最近备份</div>`
     },
     zmlsetting: `<div class='zdy_dialog' style='text-align:right;width:280px' id="zmldialog">
 <div class="setting-item"><span><label for="zml_name"> 输入自定义命令名称:</label></span><span><input id="zml_name"
@@ -324,19 +328,20 @@ var UI = {
         <span cmd = "$gogzm">古宗门</span>
         <span cmd = "$godddb">大殿底部</span></div>`*/
     ],
-    fbui: function (name, mulit, diffi) {
+    fbui: function (name, multi, difficult) {
+        if (name == null) return '';
         let ui = `<div class='item-commands'>`;
         if (unsafeWindow && unsafeWindow.ToRaid) {
-            if (ToRaid.existAutoDungeon(`${name} 0`)) {
+            if (unsafeWindow.ToRaid.existAutoDungeon(`${name} 0`)) {
                 ui = ui + `<span cmd = "@fb ${name} 0" >自动副本-${name}</span>`;
             }
-            if (diffi) {
-                if (ToRaid.existAutoDungeon(`${name} 1`)) {
+            if (difficult) {
+                if (unsafeWindow.ToRaid.existAutoDungeon(`${name} 1`)) {
                     ui += `<span cmd = "@fb ${name} 1" >自动副本-${name}-困难</span>`;
                 }
             }
-            if (mulit) {
-                if (ToRaid.existAutoDungeon(`${name} 2`)) {
+            if (multi) {
+                if (unsafeWindow.ToRaid.existAutoDungeon(`${name} 2`)) {
                     ui += `<span cmd = "@fb ${name} 2" >自动副本-${name}-组队</span>`;
                 }
             }

@@ -1,0 +1,23 @@
+jh fb 18 start1;cr taohua/haitan
+@until (:path) == taohua/haitan
+@taohualin
+@wait 1000
+go south
+@kill 陆乘风
+go east;go east
+@kill 曲灵风
+go east;go north
+ok {黄蓉}
+@zhoubotong
+@kill 周伯通
+look xia;search xia
+go east[2]
+go northwest;go southeast;go southeast;go northwest
+go southwest;go northeast;go northeast;go southwest
+@until (:path) == taohua/haitan
+@taohualin
+@wait 2000
+go south;go east
+go east;go east;go north
+select {黄蓉};give1 {黄蓉}
+@kill 黄蓉

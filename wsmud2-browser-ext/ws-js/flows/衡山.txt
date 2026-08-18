@@ -1,0 +1,11 @@
+jh fb 14 start1;cr wuyue/henshan/hengyang
+go west;go north
+@kill 嵩山弟子,嵩山弟子
+go north;go north
+@kill 费彬
+@kill 史登达,丁勉
+@kill 刘正风
+go south[3];go west[2]
+@kill 曲洋,曲非烟
+go east[4];go southeast;go south;go east;go south
+@kill 莫大

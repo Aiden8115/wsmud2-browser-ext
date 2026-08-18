@@ -1,0 +1,19 @@
+jh fb 23 start2;cr murong/anbian 1 0
+go east;go east
+@kill 包不同
+go east;go south;go east;go south;go south
+@kill 王夫人
+go north;go north;go west;go north
+[if] (_DungeonWaitSkillCD) == 打开
+    @cd
+go east;go east;go east
+@kill 慕容复
+go west;go north
+look pai;bai pai[3]
+go north;search
+[if] (_DungeonWaitSkillCD) == 打开
+    @cd
+go south
+@kill 慕容博
+go east
+@kill 阿朱

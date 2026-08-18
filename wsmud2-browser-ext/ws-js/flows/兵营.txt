@@ -1,0 +1,12 @@
+@print 👑 感谢 qwer68588 分享此副本代码。
+jh fb 4 start1;cr yz/by/damen
+@kill 官兵,官兵
+$wait 1000
+@liaoshang
+[if] (_DungeonWaitSkillCD) == 打开
+    @cd
+go south
+@kill 官兵,官兵,官兵,武将,武将,史青山
+$wait 1000
+look men;open men
+go south;search

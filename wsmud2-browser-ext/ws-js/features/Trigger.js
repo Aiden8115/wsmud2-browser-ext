@@ -505,7 +505,7 @@
                 };
                 const type = types[data.action];
                 if (type == null) return;
-                if (data.sid instanceof Array) {
+                if (Array.isArray(data.sid)) {
                     for (const s of data.sid) {
                         post(data, s, type);
                     }

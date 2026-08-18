@@ -7,7 +7,7 @@ const TaskHelper = {
     //private
     _recmd: function (cmds) {
         if (cmds) {
-            cmds = cmds instanceof Array ? cmds : cmds.split(';');
+            cmds = Array.isArray(cmds) ? cmds : cmds.split(';');
             cmds.baoremove(0);
             cmds = cmds.join(";");
             return cmds;

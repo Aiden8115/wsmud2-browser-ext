@@ -184,7 +184,7 @@ Object.assign(WG, {
                   }
 
                   // 原始逻辑：检查具体类型匹配
-                  if (listener.types == data.type || (listener.types instanceof Array && $
+                  if (listener.types == data.type || (Array.isArray(listener.types) && $
                                                       .inArray(data.type, listener.types) >= 0)) {
                       listener.fn(data);
                   }
@@ -196,23 +196,33 @@ Object.assign(WG, {
       },
       receive_message: function (msg) {
           if (!msg || !msg.data) return;
-          var data;
-          var deepCopy = function (source) {
-              var result = {};
-              for (var key in source) {
-                  result[key] = typeof source[key] === 'object' ? deepCopy(source[key]) : source[key];
+          try {
+              var data;
+              var deepCopy = function (source) {
+                  var result = {};
+                  for (var key in source) {
+                      result[key] = typeof source[key] === 'object' ? deepCopy(source[key]) : source[key];
+                  }
+                  return result;
               }
-              return result;
-          }
-          if (msg.data[0] == '{' || msg.data[0] == '[') {
-              var func = new Function("return " + msg.data + ";");
-              data = func();
-          } else {
-              data = {
-                  type: 'text',
-                  msg: msg.data
-              };
-          }
+              if (msg.data[0] == '{' || msg.data[0] == '[') {
+                  try {
+                      var func = new Function("return " + msg.data + ";");
+                      data = func();
+                  } catch (e) {
+                      // 第一层：解析降级 — JSON.parse 失败时降级为文本处理
+                      console.error('JSON 解析失败，降级为文本处理', e);
+                      data = {
+                          type: 'text',
+                          msg: msg.data
+                      };
+                  }
+              } else {
+                  data = {
+                      type: 'text',
+                      msg: msg.data
+                  };
+              }
           // 开启代码显示功能后，打印所有Data
           // "状态(status)","exits","地图名与房间人物(room)","items","人物刷新(itemadd)","人物移除(itemremove)","血量状态(sc)","文本(text) ","聊天(msg) ","战斗状态(combat)","技能监控(dispfm),"死亡(die)","冷却结束(clearDistime)","技能可用(enapfm)""
           if (Coding && data.type != 'time'){
@@ -322,7 +332,16 @@ Object.assign(WG, {
 
           if (data.type == 'dialog' && data.t == 'fb' && data.k == undefined) {
               data.desc += "\n";
-              data.desc += UI.fbui(fb_path[data.index], data.is_multi, data.is_diffi)
+              // 从 Dialog.jh_fb.items 获取副本名称（游戏已正确解析 data.fbs）
+              var dungeonName = null;
+              if (typeof Dialog !== 'undefined' && Dialog.jh_fb && Dialog.jh_fb.items && Dialog.jh_fb.items[data.index]) {
+                  dungeonName = Dialog.jh_fb.items[data.index].name;
+              }
+              // 备选：从 fb_path 获取
+              if (!dungeonName) {
+                  dungeonName = fb_path[data.index];
+              }
+              data.desc += UI.fbui(dungeonName, data.is_multi, data.is_diffi)
               data.k = 'knva';
               let p = deepCopy(msg);
               p.data = JSON.stringify(data);
@@ -554,6 +573,13 @@ Object.assign(WG, {
 
           if (unsafeWindow.funny) {
               if (unsafeWindow.funny.API != null) { unsafeWindow.funny.API.onmessage(msg); }
+          }
+          } catch (e) {
+              // 第三层：收包口整体 try/catch — 异常不影响后续处理
+              console.error('[receive_message] 消息处理异常', e);
+              if (typeof Push !== 'undefined') {
+                  Push('[wsmud插件] 消息处理异常：' + e.message);
+              }
           }
       },
 });

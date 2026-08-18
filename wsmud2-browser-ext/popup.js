@@ -101,6 +101,14 @@ document.addEventListener("DOMContentLoaded", () => {
         reader.onload = (e) => {
             try {
                 const text = e.target.result;
+                // 7.3 安全加固：检查导入数据是否包含可执行代码
+                const dangerousPatterns = ['eval(', 'new Function(', 'setTimeout(', 'setInterval('];
+                const hasDangerousCode = dangerousPatterns.some(p => text.indexOf(p) >= 0);
+                if (hasDangerousCode) {
+                    if (!confirm('导入的配置文件中检测到可能包含可执行代码（eval、new Function 等），\n是否确认导入？请确保来源可信。')) {
+                        return;
+                    }
+                }
                 chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
                     chrome.tabs.sendMessage(tabs[0].id, { action: "GM_import", data: text }, (response) => {
                         if (response && response.success) {
@@ -116,4 +124,26 @@ document.addEventListener("DOMContentLoaded", () => {
         };
         reader.readAsText(file);
     });
+
+    // 3.4 查询存储空间使用情况
+    function updateStorageUsage() {
+        chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+            if (!tabs[0]) return;
+            chrome.tabs.sendMessage(tabs[0].id, { action: "getStorageUsage" }, (response) => {
+                if (response && response.usage) {
+                    var usage = response.usage;
+                    var totalKB = usage.totalBytes / 1024;
+                    var maxBytes = 5 * 1024 * 1024;
+                    var percent = Math.min((usage.totalBytes / maxBytes) * 100, 100);
+                    document.getElementById("storageUsage").textContent = totalKB.toFixed(0) + 'KB / 5MB（' + usage.keyCount + '个键）';
+                    var bar = document.getElementById("storageBar");
+                    bar.style.width = percent + '%';
+                    bar.className = 'storage-bar-fill';
+                    if (percent > 80) bar.classList.add('danger');
+                    else if (percent > 60) bar.classList.add('warning');
+                }
+            });
+        });
+    }
+    updateStorageUsage();
 });

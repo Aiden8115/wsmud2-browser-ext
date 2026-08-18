@@ -1,0 +1,15 @@
+jh fb 20 start1;cr xingxiu/xxh6
+go northeast
+@kill 星宿派
+go north
+@kill 星宿派
+go northwest
+@kill 星宿派
+go southwest
+@kill 星宿派
+go south
+@kill 星宿派
+[if] (_DungeonWaitSkillCD) == 打开
+    @cd
+go north;go northeast;go north
+@kill 丁春秋

@@ -1,0 +1,21 @@
+@print 👑 感谢 leiyulin 分享此副本代码。
+jh fb 17 start1;cr cd/yunmeng/senlin
+$wait 500
+go east
+@kill 巨鳄
+go north
+@kill 巨鳄,巨鳄
+go east
+@kill 巨鳄,巨鳄
+go west;go north
+@kill 巨鳄,巨鳄
+look lu;kan lu;go north
+@kill 火龙
+go north
+@kill 火龙
+go north
+@kill 火龙
+[if] (_DungeonWaitSkillCD) == 打开
+    @cd
+go north
+@kill 火龙王

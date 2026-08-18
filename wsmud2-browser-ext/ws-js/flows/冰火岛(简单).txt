@@ -1,0 +1,20 @@
+@print 👑 感谢 WanJiaQi 分享此副本代码。
+jh fb 21 start1;cr mj/bhd/haibian 0 0
+go west
+@kill 炎龙
+go west
+@kill 炎龙
+go west
+@kill 炎龙王
+@liaoshang
+//go west;search
+//@tip 你找到了
+go east[3];go north
+@kill 白熊
+go north
+@kill 白熊
+@liaoshang
+go north;go west;zuan dong
+[if] (_DungeonWaitSkillCD) == 打开
+    @cd
+@kill 谢逊

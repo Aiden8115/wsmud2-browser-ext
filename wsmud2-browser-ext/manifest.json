@@ -1,12 +1,11 @@
 {
   "manifest_version": 3,
   "name": "WSMUD 插件",
-  "version": "26.2.4",
+  "version": "26.4",
   "description": "增强《MUD游戏，武神传说》的游戏体验",
   "permissions": [
     "storage",
-    "declarativeNetRequest",
-    "tabs"
+    "declarativeNetRequest"
   ],
   "host_permissions": [
     "*://*.wsmud2.com/*",
@@ -40,6 +39,8 @@
     {
       "resources": [
         "ws-js/**/*.js",
+        "ws-js/**/*.css",
+        "ws-js/flows/**",
         "ws-data/complete.mp3",
         "ws-data/JetBrainsMono-Regular.woff2",
         "ws-data/武神2综合工具网页版.html",

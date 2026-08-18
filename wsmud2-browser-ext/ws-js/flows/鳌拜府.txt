@@ -1,0 +1,35 @@
+@print 👑 感谢 Jeaepan 分享此副本代码。
+jh fb 6 start1;cr bj/ao/damen
+@kill 官兵,官兵
+go west
+@kill 吴之荣
+go north
+@kill 厨师
+go south;go west
+@kill 家将,家将,女管家
+[if] (_DungeonWaitSkillCD) == 打开
+    @cd
+go west
+@kill 满洲第一勇士 鳌拜
+go east;go north
+look shu;open shu
+@tip 发现扉页的($pos)下角被鳌拜写了一个大大的杀字
+look hua
+$wait 500
+[if] (pos) == 左
+    tleft hua
+[if] (pos) == 右
+    $wait 500
+    tright hua
+go north
+select {r四十二章经g}?
+get {r四十二章经g}?
+go south;go south
+($open) = 没开
+look men;unlock men
+@tip 你用一把钥匙($open)了牢房门|你不会撬锁
+[if] (open) == 打开
+    go south
+    select {r庄允城}?
+    ask {r庄允城}? about 吴之荣
+    @kill 庄允城

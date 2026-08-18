@@ -1,0 +1,21 @@
+jh fb 16 start1;cr wuyue/songshan/taishi
+[if] (_DungeonWaitSkillCD) == 打开
+    @cd
+go north[2]
+@kill 十三太保
+[if] (_DungeonWaitSkillCD) == 打开
+    @cd
+go northup;go northeast;go northup[2]
+@kill 十三太保,十三太保
+[if] (_DungeonWaitSkillCD) == 打开
+    @cd
+go northup;go north
+@kill 十三太保,十三太保,十三太保
+[if] (_DungeonWaitSkillCD) == 打开
+    @cd
+go north
+@kill 十三太保,十三太保,十三太保,十三太保
+[if] (_DungeonWaitSkillCD) == 打开
+    @cd
+go north
+@kill 左冷禅

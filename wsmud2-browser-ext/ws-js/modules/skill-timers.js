@@ -1,124 +1,251 @@
 // skill-timers.js
 // Skill CD and Buff duration timers
+// 使用单一 200ms 主时钟统一管理所有 CD/Buff 倒计时
 'use strict';
 
-// 保存技能CD和BUFF定时器的Map
-var skillCDTimers = new Map();
-var buffTimers = new Map();
+// ============================================================
+// 中央计时器注册表
+// ============================================================
+var _timerRegistry = [];      // 所有活跃定时器条目
+var _mainClockId = null;      // 主时钟 setInterval ID
+var _nextTimerId = 1;         // 自增 ID
 
-// 获取BUFF定时器的组合键
-function getBuffTimerKey(sid, id) {
-    return `${sid}-${id}`;
+// 获取下一个唯一 ID
+function _nextId() {
+    return _nextTimerId++;
 }
 
-// 通用显示更新函数，参数：HTML元素、人物id、技能文本、技能时长、定时器、已过时间、显示颜色
-function updateDurationDisplay(selector, id, originalText, totalSeconds, timerMap, overtime = 0, colorTag = 'hir') {
-    let remainingSeconds =totalSeconds - overtime / 1000
-    // 更新函数
-    const update = () => {
-        // 检查是否还有该元素的定时器（防止重复调用）
-        // if (!timerMap.has(id)) {
-        //     return;
-        // }
-        
-        const elements = document.querySelectorAll(selector);
-        elements.forEach((el) => {
+// 主时钟 tick 函数（200ms 间隔）
+function _mainTick() {
+    var now = Date.now();
+    for (var i = _timerRegistry.length - 1; i >= 0; i--) {
+        var entry = _timerRegistry[i];
+        if (!entry) continue;
 
-            let displayTime;
-            if (remainingSeconds > 60) {
-                displayTime = Math.ceil(remainingSeconds).toFixed(0);
-            } else {
-                displayTime = remainingSeconds.toFixed(1);
-            }
-            
-            const shadowElement = el.querySelector('.shadow');
-            const shadowStyle = shadowElement ? shadowElement.outerHTML : '';
-            
-            if (selector.startsWith('.pfm-item')) {
-                // SKILLcd 显示：换行并锁定在原元素正下方
-                el.innerHTML = `${originalText}<br><span><${colorTag}>${displayTime}s</${colorTag}></span>${shadowStyle}`;
-            } else {
-                // 其他情况保持原有显示
-                el.innerHTML = `${originalText}<${colorTag}>${displayTime}s</${colorTag}>${shadowStyle}`;
-            }
-        });
-        
-        // 根据剩余时间设置不同的更新频率
-        let updateInterval;
-        let subtractValue;
-        
-        if (remainingSeconds > 60) {
-            updateInterval = 1000;
-            subtractValue = 1;
+        var elapsed = now - entry.startTime;
+        var remaining = entry.totalMs - elapsed;
+
+        if (remaining <= 0) {
+            // 计时结束
+            _updateDisplay(entry, 0);
+            _timerRegistry.splice(i, 1);
+            if (entry.onExpire) entry.onExpire();
         } else {
-            updateInterval = 200;
-            subtractValue = 0.2;
+            _updateDisplay(entry, remaining);
         }
-        
-        remainingSeconds -= subtractValue;
-        if (remainingSeconds > 0) {
-            const timerId = setTimeout(update, updateInterval);
-            timerMap.set(id, timerId);
-        } else {
-            const elements = document.querySelectorAll(selector);
-            elements.forEach((el) => {
-                const shadowElement = el.querySelector('.shadow');
-                const shadowStyle = shadowElement ? shadowElement.outerHTML : '';
-                
-                // 计时结束后显示同宽度的空白字符
-                const spaces = '0.0s'; // 5个全角空格，对应"00.0s"的宽度
-                if (selector.startsWith('.pfm-item')) {
-                    // SKILLcd 显示：换行并锁定在原元素正下方
-                    el.innerHTML = `${originalText}<br><span><${colorTag}>${spaces}</${colorTag}></span>${shadowStyle}`;
-                } else {
-                    // 其他情况保持原有显示
-                    el.innerHTML = `${originalText}<${colorTag}>${spaces}</${colorTag}>${shadowStyle}`;
-                }
-                // 保留originalText，以便下次添加计时前清除
-            });
-            timerMap.delete(id);
-        }
+    }
+}
+
+// 启动主时钟（如尚未启动）
+function _ensureMainClock() {
+    if (_mainClockId === null) {
+        _mainClockId = setInterval(_mainTick, 200);
+    }
+}
+
+// 停止主时钟（无活跃定时器时自动停止）
+function _stopMainClockIfEmpty() {
+    if (_mainClockId !== null && _timerRegistry.length === 0) {
+        clearInterval(_mainClockId);
+        _mainClockId = null;
+    }
+}
+
+// ============================================================
+// 显示更新函数
+// ============================================================
+function _getDisplayTime(remainingMs) {
+    var seconds = remainingMs / 1000;
+    if (seconds > 60) {
+        return Math.ceil(seconds).toFixed(0);
+    } else {
+        return seconds.toFixed(1);
+    }
+}
+
+function _buildDisplayHtml(originalText, colorTag, displayTime, shadowStyle, isPfmItem) {
+    if (isPfmItem) {
+        // 技能CD：右上角小字浮层，不撑开行高
+        return originalText
+            + '<span class="cd-overlay" style="position:absolute;top:0;right:0;font-size:10px;line-height:1;pointer-events:none;">'
+            + '<' + colorTag + '>' + displayTime + 's</' + colorTag + '>'
+            + '</span>'
+            + shadowStyle;
+    } else {
+        // Buff 等其他情况
+        return originalText
+            + '<' + colorTag + '>' + displayTime + 's</' + colorTag + '>'
+            + shadowStyle;
+    }
+}
+
+function _updateDisplay(entry, remainingMs) {
+    var isPfmItem = entry.selector.startsWith('.pfm-item');
+    var displayTime = remainingMs > 0 ? _getDisplayTime(remainingMs) : '0.0s';
+
+    var elements = document.querySelectorAll(entry.selector);
+    elements.forEach(function (el) {
+        var shadowElement = el.querySelector('.shadow');
+        var shadowStyle = shadowElement ? shadowElement.outerHTML : '';
+        el.innerHTML = _buildDisplayHtml(entry.originalText, entry.colorTag, displayTime, shadowStyle, isPfmItem);
+    });
+}
+
+// ============================================================
+// 注册/注销定时器
+// ============================================================
+function _registerTimer(selector, id, originalText, totalMs, colorTag, onExpire) {
+    var timerId = _nextId();
+    var entry = {
+        timerId: timerId,
+        key: id,
+        selector: selector,
+        originalText: originalText,
+        totalMs: totalMs,
+        colorTag: colorTag,
+        startTime: Date.now(),
+        onExpire: onExpire
     };
-    
-    const timerId = setTimeout(update, 100);
-    timerMap.set(id, timerId);
+    _timerRegistry.push(entry);
+    _ensureMainClock();
+    return timerId;
 }
 
-// 清除技能CD显示函数
+function _unregisterTimer(key) {
+    for (var i = 0; i < _timerRegistry.length; i++) {
+        if (_timerRegistry[i] && _timerRegistry[i].key === key) {
+            _timerRegistry.splice(i, 1);
+            break;
+        }
+    }
+    _stopMainClockIfEmpty();
+}
+
+// ============================================================
+// 对外接口
+// ============================================================
+
+// 技能CD显示函数
+function showSkillCD(id, distime, overtime) {
+    if (skillCD !== "开" && skillCD !== true && skillCD !== 'true') return;
+
+    var elements = document.querySelectorAll('.pfm-item[pid="' + id + '"]');
+    if (elements.length === 0) {
+        console.log('找不到SKILL元素:pid=' + id);
+        return;
+    }
+
+    // 清除旧定时器
+    clearSkillCDDisplay(id);
+
+    // 保存原始文本
+    var originalText = '';
+    elements.forEach(function (el) {
+        if (el.originalText) {
+            el.innerHTML = el.originalText;
+        }
+        el.originalText = el.innerHTML;
+        if (!originalText) originalText = el.innerHTML;
+    });
+
+    var totalSeconds = (distime - (overtime || 0)) / 1000;
+    var totalMs = totalSeconds * 1000;
+
+    if (totalMs <= 0) return;
+
+    _registerTimer(
+        '.pfm-item[pid="' + id + '"]',
+        'skill_' + id,
+        originalText,
+        totalMs,
+        skillCDColor || 'hir',
+        function () {
+            // 过期后重置
+            var els = document.querySelectorAll('.pfm-item[pid="' + id + '"]');
+            els.forEach(function (el) {
+                if (el.originalText) {
+                    var shadowElement = el.querySelector('.shadow');
+                    var shadowStyle = shadowElement ? shadowElement.outerHTML : '';
+                    el.innerHTML = el.originalText
+                        + '<span class="cd-overlay" style="position:absolute;top:0;right:0;font-size:10px;line-height:1;pointer-events:none;">'
+                        + '<' + (skillCDColor || 'hir') + '>0.0s</' + (skillCDColor || 'hir') + '>'
+                        + '</span>'
+                        + shadowStyle;
+                }
+            });
+        }
+    );
+}
+
+// 清除技能CD显示
 function clearSkillCDDisplay(id) {
-    // 查找技能元素
-    const elements = document.querySelectorAll(`.pfm-item[pid="${id}"]`);
-    if (elements.length === 0) return;
-    
-    elements.forEach((el) => {
+    var key = 'skill_' + id;
+    _unregisterTimer(key);
+
+    var elements = document.querySelectorAll('.pfm-item[pid="' + id + '"]');
+    elements.forEach(function (el) {
         if (el.originalText) {
             el.innerHTML = el.originalText;
         }
     });
-    
-    if (skillCDTimers.has(id)) {
-        clearTimeout(skillCDTimers.get(id));
-        skillCDTimers.delete(id);
-    }
+}
+
+// BUFF持续时间显示函数
+function showBuffDuration(sid, duration, id, count, overtime) {
+    if (buffCD !== "开" && buffCD !== true && buffCD !== 'true') return;
+
+    // 延时等待元素刷新
+    setTimeout(function () {
+        var elements = document.querySelectorAll('.room-item[itemid="' + id + '"] .status-item[sid="' + sid + '"]');
+        if (elements.length === 0) {
+            console.log('找不到BUFF元素: sid=' + sid + ', id=' + id);
+            return;
+        }
+
+        var key = 'buff_' + sid + '_' + id;
+        clearBuffDisplay(sid, id);
+
+        var newOriginalText = '';
+        elements.forEach(function (el) {
+            if (el.originalText) {
+                el.innerHTML = el.originalText;
+            }
+            newOriginalText = el.firstChild ? el.firstChild.nodeValue.trim() : el.textContent.trim();
+            el.originalText = newOriginalText;
+        });
+
+        var finalOriginalText = elements[0].originalText;
+        if (count > 0) {
+            finalOriginalText = finalOriginalText.replace(/x\d+$/, '') + 'x' + count;
+        }
+
+        var totalMs = (duration + 100) - (overtime || 0);
+        if (totalMs <= 0) return;
+
+        _registerTimer(
+            '.room-item[itemid="' + id + '"] .status-item[sid="' + sid + '"]',
+            key,
+            finalOriginalText,
+            totalMs,
+            buffCDColor || 'hir',
+            function () {
+                clearBuffDisplay(sid, id);
+            }
+        );
+    }, 100);
 }
 
 // 清除单个BUFF定时
 function clearBuffDisplay(sid, id) {
-    const key = getBuffTimerKey(sid, id);
-    
-    if (buffTimers.has(key)) {
-        clearTimeout(buffTimers.get(key));
-        buffTimers.delete(key);
-    }
-    
-    const elements = document.querySelectorAll(`.room-item[itemid="${id}"] .status-item[sid="${sid}"]`);
-    
-    elements.forEach((el) => {
-        if (el.originalText) {
-            const shadowElement = el.querySelector('.shadow');
-            const shadowStyle = shadowElement ? shadowElement.outerHTML : '';
+    var key = 'buff_' + sid + '_' + id;
+    _unregisterTimer(key);
 
-            el.innerHTML = `${el.originalText}${shadowStyle}`;
+    var elements = document.querySelectorAll('.room-item[itemid="' + id + '"] .status-item[sid="' + sid + '"]');
+    elements.forEach(function (el) {
+        if (el.originalText) {
+            var shadowElement = el.querySelector('.shadow');
+            var shadowStyle = shadowElement ? shadowElement.outerHTML : '';
+            el.innerHTML = el.originalText + shadowStyle;
             el.originalText = null;
         }
     });
@@ -126,79 +253,22 @@ function clearBuffDisplay(sid, id) {
 
 // 清除所有BUFF定时
 function clearAllBuffTimers() {
-    for (const [key, timerId] of buffTimers) {
-        clearTimeout(timerId);
+    // 移除所有 buff_ 开头的定时器
+    for (var i = _timerRegistry.length - 1; i >= 0; i--) {
+        if (_timerRegistry[i] && _timerRegistry[i].key.indexOf('buff_') === 0) {
+            _timerRegistry.splice(i, 1);
+        }
     }
-    buffTimers.clear();
-    
+    _stopMainClockIfEmpty();
+
     // 恢复原始文本
-    const allStatusItems = document.querySelectorAll('.status-item');
-    allStatusItems.forEach((el) => {
+    var allStatusItems = document.querySelectorAll('.status-item');
+    allStatusItems.forEach(function (el) {
         if (el.originalText) {
-            const shadowElement = el.querySelector('.shadow');
-            const shadowStyle = shadowElement ? shadowElement.outerHTML : '';
-            
-            el.innerHTML = `${el.originalText}${shadowStyle}`;
+            var shadowElement = el.querySelector('.shadow');
+            var shadowStyle = shadowElement ? shadowElement.outerHTML : '';
+            el.innerHTML = el.originalText + shadowStyle;
             el.originalText = null;
         }
     });
 }
-
-// 技能CD显示函数
-function showSkillCD(id, distime, overtime = 0) {
-    if (skillCD !== "开" && skillCD !== true && skillCD !== 'true') return;
-    // 查找元素
-    const elements = document.querySelectorAll(`.pfm-item[pid="${id}"]`);
-    if (elements.length === 0) {console.log(`找不到SKILL元素:pid=${pid}, id=${id}`);return;}
-    
-    clearSkillCDDisplay(id);
-    
-    elements.forEach((el) => {
-        // 清除之前的计时显示，恢复原始内容
-        if (el.originalText) {
-            el.innerHTML = el.originalText;
-        }
-        // 保存当前的原始内容（不包含计时）
-        el.originalText = el.innerHTML;
-    });
-    
-    const totalSeconds = distime / 1000;
-    
-    updateDurationDisplay(`.pfm-item[pid="${id}"]`, id, elements[0].originalText, totalSeconds, skillCDTimers, overtime, skillCDColor);
-}
-
-// BUFF持续时间显示函数
-function showBuffDuration(sid, duration, id, count = 0, overtime = 0) {
-    // 只有当buffCD为"开"时才执行
-    if (buffCD !== "开" && buffCD !== true && buffCD !== 'true') return;
-    // 延时100毫秒，等待元素刷新
-    setTimeout(() => {
-        const elements = document.querySelectorAll(`.room-item[itemid="${id}"] .status-item[sid="${sid}"]`);
-
-        if (elements.length === 0) {console.log(`找不到BUFF元素: sid=${sid}, id=${id}`);return;}
-
-        clearBuffDisplay(sid, id);
-        
-        let newOriginalText = '';
-        elements.forEach((el) => {
-            // 清除之前的计时显示，恢复原始内容
-            if (el.originalText) {
-                el.innerHTML = el.originalText;
-            }
-            // 保存当前的原始内容（不包含计时）
-            newOriginalText = el.firstChild ? el.firstChild.nodeValue.trim() : el.textContent.trim();
-            el.originalText = newOriginalText;
-        });
-        
-        const totalSeconds = (duration + 100) / 1000;
-        // 处理refresh BUFF的层数
-        let finalOriginalText = elements[0].originalText;
-        if (count > 0) {
-            finalOriginalText = finalOriginalText.replace(/x\d+$/, '') + `x${count}`;
-        }
-        // 使用通用显示更新函数，确保只在特定room-item下添加BUFF文本
-        updateDurationDisplay(`.room-item[itemid="${id}"] .status-item[sid="${sid}"]`, getBuffTimerKey(sid, id), finalOriginalText, totalSeconds, buffTimers, overtime, buffCDColor);
-    }, 100);
-}
-
-

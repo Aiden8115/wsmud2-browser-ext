@@ -253,6 +253,8 @@ var fb_path = [];
 
 //自动重连
 var auto_relogin = null;
+//重连失败后自动刷新页面重登
+var auto_relogin_page = false;
 //dps统计信息
 var normalHitCount = 0;       // 普通攻击次数
 var normalDamageTotal = 0;    // 普通伤害总和

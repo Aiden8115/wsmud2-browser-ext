@@ -398,15 +398,31 @@
                 await this.waitForElementVisible("#slist_panel", 1e4);
 
                 this.updateStatus("步骤2/3: 正在选择区服...");
+                var serverFound = false;
                 $(".server-list li").filter(function () {
-                    return $(this).text().trim() === server;
+                    // 8.1 修复：使用 trim() 去除前后空白，修复服务器名匹配永远失败问题
+                    return $(this).text().trim() === server.trim();
                 }).click();
                 $('.panel_item[command="SelectServer"]').click();
                 await this.waitForElementVisible("#role_panel", 1e4);
 
                 this.updateStatus("步骤3/3: 正在选择角色...");
-                await this.sleep(500);
-                $(`.role-list li[roleid="${roleId}"]`).click();
+                // 8.1 修复：使用轮询等待角色列表渲染完成，解决异步渲染问题
+                var roleFound = false;
+                for (var retry = 0; retry < 10; retry++) {
+                    var $roleEl = $(`.role-list li[roleid="${roleId}"]`);
+                    if ($roleEl.length > 0) {
+                        $roleEl.click();
+                        roleFound = true;
+                        break;
+                    }
+                    await this.sleep(500);
+                }
+                if (!roleFound) {
+                    this.updateStatus("角色列表渲染超时，请重试", true);
+                    resetBtn();
+                    return;
+                }
                 await this.sleep(500);
                 $('.panel_item[command="SelectRole"]').click();
                 this.updateStatus("登录指令已发送！");
@@ -420,15 +436,15 @@
         // 轮询等待元素可见
         waitForElementVisible: function (selector, timeout) {
             return new Promise((resolve, reject) => {
-                const startTime = Date.now();
-                const interval = setInterval(() => {
-                    const $element = $(selector);
+                var startTime = Date.now();
+                var interval = setInterval(function () {
+                    var $element = $(selector);
                     if ($element.is(":visible")) {
                         clearInterval(interval);
                         resolve();
                     } else if (Date.now() - startTime > timeout) {
                         clearInterval(interval);
-                        reject(`操作超时: 等待 ${selector} 失败`);
+                        reject('操作超时: 等待 ' + selector + ' 失败');
                     }
                 }, 200);
             });

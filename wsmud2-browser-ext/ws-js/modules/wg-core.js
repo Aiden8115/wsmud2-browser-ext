@@ -981,7 +981,67 @@ Object.assign(WG, {
                   };
                   WG.receive_message(timeTips);
               }, 1000);
+              // 挂机健康自检定时器（每5分钟）
+              setInterval(function () {
+                  WG.healthCheck();
+              }, 300000);
           }, 1000);
+      },
+      healthCheck: function () {
+          try {
+              var warnings = [];
+              // 1. 消息队列积压检查
+              if (typeof window._getCmdQueue === 'function') {
+                  var queue = window._getCmdQueue();
+                  if (queue && queue.length > 20) {
+                      warnings.push('命令队列积压：' + queue.length + '条');
+                  }
+              }
+              // 2. DOM 节点膨胀检查
+              var logArea = document.querySelector('.content-message');
+              if (logArea && logArea.querySelector('pre')) {
+                  var pre = logArea.querySelector('pre');
+                  var childCount = pre.getElementsByTagName('*').length;
+                  if (childCount > 500) {
+                      warnings.push('日志DOM节点过多：' + childCount + '个');
+                      // 清理：只保留最近100行
+                      var lines = pre.innerHTML.split('\n');
+                      if (lines.length > 200) {
+                          pre.innerHTML = lines.slice(-100).join('\n');
+                      }
+                  }
+                  // 3. 日志内容超长检查
+                  var htmlLen = pre.innerHTML.length;
+                  if (htmlLen > 50000) {
+                      warnings.push('日志内容过长：' + htmlLen + '字符，已截断');
+                      pre.innerHTML = pre.innerHTML.slice(-20000);
+                  }
+              }
+              // 4. localStorage 存储超限检查
+              var totalSize = 0;
+              try {
+                  for (var key in localStorage) {
+                      if (localStorage.hasOwnProperty(key)) {
+                          totalSize += localStorage.getItem(key).length || 0;
+                      }
+                  }
+              } catch (e) { /* ignore */ }
+              var maxSize = 4 * 1024 * 1024; // 4MB
+              if (totalSize > maxSize) {
+                  warnings.push('localStorage 已用 ' + (totalSize / 1024 / 1024).toFixed(1) + 'MB，可能接近存储上限');
+              }
+              // 推送告警
+              if (warnings.length > 0) {
+                  var msg = '挂机健康检查告警：\n' + warnings.join('\n');
+                  console.warn('[healthCheck]', msg);
+                  if (typeof Push !== 'undefined') {
+                      Push(msg);
+                  }
+                  messageAppend('<hir>' + msg + '</hir>');
+              }
+          } catch (e) {
+              console.error('[healthCheck] 检查异常', e);
+          }
       },
       wsdelaytest: async function () {
           GameState.wsdelay.SetTime = new Date().getTime();

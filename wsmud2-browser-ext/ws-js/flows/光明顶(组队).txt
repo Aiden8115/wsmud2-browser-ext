@@ -1,0 +1,28 @@
+@print 👑 感谢 dtooboss 分享此副本代码。
+jh fb 26 start3;cr mj/shanmen 2 0
+go north;go west;go northwest
+@kill 冷谦
+go north
+@kill 张中
+go north
+@kill 周颠
+go north;go north
+@kill 颜垣
+go east
+@kill 唐洋
+go north
+@kill 辛然
+go west;go west
+@kill 庄铮
+go south
+@kill 闻苍松
+go east;go south
+@kill 说不得,彭莹玉
+[if] (_DungeonWaitSkillCD) == 打开
+    @cd
+go north[2]
+@kill 韦一笑,殷天正
+[if] (_DungeonWaitSkillCD) == 打开
+    @cd
+go north[2]
+@kill 张无忌,杨逍,范遥

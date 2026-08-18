@@ -1,0 +1,7 @@
+@print 👑 感谢 Airson 分享此副本代码。
+jh fb 23 start1;cr murong/anbian
+go east;go east
+@kill 包不同
+go east;go east;go east;go north
+look pai;bai pai[3]
+go north;search

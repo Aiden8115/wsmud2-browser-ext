@@ -1,0 +1,18 @@
+jh fb 8 start3;cr bj/shenlong/haitan 2 0;go north
+@kill 毒蛇,竹叶青
+look bush;kan bush;go north
+@kill 毒蛇,竹叶青
+go north
+@kill 神龙教弟子,神龙教弟子
+go north
+@kill 神龙教军师 陆高轩
+go south;go east
+@kill 神龙教青龙使 许雪亭
+go east
+@kill 神龙教女弟子,神龙教女弟子
+go north[2]
+@kill 神龙教弟子,神龙教弟子
+[if] (_DungeonWaitSkillCD) == 打开
+    @cd
+go north
+@kill 洪安通,张淡月,无根道长

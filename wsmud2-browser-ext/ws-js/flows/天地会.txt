@@ -1,0 +1,28 @@
+@print 👑 感谢 jicki 分享此副本代码，感谢 andyfos、mma1996 协助完成。
+jh fb 7 start1;cr bj/tdh/hct
+@kill 药铺伙计
+@kill 天地会青木堂护法 徐天川
+go west
+@kill 关夫子 关安基
+knock;knock;knock
+go down
+@until {r尸体}? != null
+go west[5]
+@until {r尸体}? != null
+go north
+@liaoshang
+[if] (_DungeonWaitSkillCD) == 打开
+    @cd
+@kill 陈近南
+go east
+get {r一}?
+@wait 500
+get {r一}?
+go west
+go north
+go east
+@tip 拔刀相助，贫尼感激不尽。
+@wait 1000
+select {r神尼};cha {r神尼}
+@wait 1000
+@kill 独臂神尼

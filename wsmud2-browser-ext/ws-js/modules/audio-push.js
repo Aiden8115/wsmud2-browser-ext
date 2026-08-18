@@ -117,6 +117,16 @@ function Push(text) {
             case "5":
                 $.post(`https://qmsg.zendee.cn/group/${pushToken}?msg=${text}`);
                 break;
+                //企业微信机器人（使用 fetch no-cors 避免 CORS 拦截）
+            case "6":
+                var pushData = { msgtype: "text", text: { content: text } };
+                fetch(`https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=${pushToken}`, {
+                    method: 'POST',
+                    mode: 'no-cors',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(pushData)
+                });
+                break;
         }
     }
 };

@@ -1,0 +1,45 @@
+@print 👑 感谢 .min-A 分享此副本代码。
+jh fb 12 start1;cr wuyue/hengshan/daziling
+go northup;go northwest;go northwest;go northup;go northup
+@kill 不戒和尚,仪琳,哑婆婆
+go north;go north
+@kill 定静师太,定闲师太,定仪师太
+
+($path)=(:path)
+[while] true
+    <---
+    @until (path)!=(:path)
+    ($path)=(:path)
+    ($guy) = {r采花大盗 田伯光}?
+    [if] (guy) != null
+        @kill 采花大盗 田伯光
+    [if] {田伯光的尸体}? != null
+        [break]
+    --->
+    go south
+    go west
+    go north
+    go south
+    go east
+    go east
+    go north
+    go south
+    go west
+    go south
+    go southdown
+    go east
+    go southeast
+    go northup
+    go southdown
+    go southeast
+    go southdown
+
+    go northup
+    go northwest
+    go northup
+    go southdown
+    go northwest
+    go northup
+    go northup
+    go north
+    go north

@@ -1,0 +1,8 @@
+jh fb 15 start1;cr wuyue/taishan/daizong
+go northup[2]
+@kill 玉磬子
+go northup[2]
+@kill 玉音子
+go northup[2]
+go northup[2]
+@kill 玉玑子

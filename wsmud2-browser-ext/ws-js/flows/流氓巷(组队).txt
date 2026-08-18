@@ -1,0 +1,10 @@
+jh fb 2 start3;cr yz/lmw/xiangzi1 2 0
+@kill 小流氓,小流氓
+go east
+@kill 流氓,流氓
+go north
+@kill 流氓头,流氓,流氓
+go south;go east
+@kill 流氓,流氓
+go east
+@kill 流氓头领

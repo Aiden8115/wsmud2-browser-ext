@@ -4,9 +4,6 @@
 
 var originWindow = {};
 $(document).ready(function () {
-    $('head').append('<link href="https://s4.zstatic.net/ajax/libs/jquery-contextmenu/3.0.0-beta.2/jquery.contextMenu.min.css" rel="stylesheet">');
-    $('head').append('<link href="https://s4.zstatic.net/ajax/libs/layer/2.3/skin/layer.css" rel="stylesheet">');
-    $('head').append('<link href="https://s4.zstatic.net/ajax/libs/font-awesome/4.7.0/css/font-awesome.css" rel="stylesheet">');
     $('body').append(UI.codeInput);
 
 
@@ -34,6 +31,8 @@ $(document).ready(function () {
     window.addEventListener("message", receiveMessage, false);
 
     function receiveMessage(event) {
+        // 7.1 安全加固：只信任本窗口来源
+        if (event.source !== window) return;
         originWindow = event;
         var origin = event.origin;
         var data = event.data;
@@ -77,7 +76,8 @@ $(document).ready(function () {
                 } else if (data.split("\n")[0].indexOf("#js") >= 0) {
                     var jscode = data.split("\n");
                     jscode.baoremove(0)
-                    eval(jscode.join(""));
+                    // 7.2 安全加固：使用 new Function 替代 eval
+                    new Function(jscode.join(""))();
                 } else {
                     WG.SendCmd(data);
                 }

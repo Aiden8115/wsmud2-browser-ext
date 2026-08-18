@@ -1,0 +1,15 @@
+jh fb 19 start3;cr baituo/damen 2 0
+[if] (_DungeonWaitSkillCD) == 打开
+    @cd
+go north[4]
+@kill 欧阳锋
+[if] (_DungeonWaitSkillCD) == 打开
+    @cd
+go south
+@kill 欧阳克,白衣少女
+go south[2];go west[3]
+@kill 毒蛇
+go north
+@kill 毒蛇
+go north;go north
+@kill 蟒蛇

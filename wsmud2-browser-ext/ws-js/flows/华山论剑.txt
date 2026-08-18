@@ -1,0 +1,9 @@
+@print 👑 感谢 koyodakla、freesunny 对此副本代码提供的帮助。
+jh fb 30 start1;cr huashan/lunjian/leitaixia
+[if] (_DungeonWaitSkillCD) == 打开
+    @cd
+go up
+@tip 恭喜你战胜了五绝
+@wait 1000
+jump bi
+get all from {r五绝宝箱}

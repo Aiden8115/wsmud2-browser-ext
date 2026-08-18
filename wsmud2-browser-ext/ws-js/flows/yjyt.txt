@@ -1,0 +1,8 @@
+jh fam 9 start;go enter;go up;
+                @await 1000;
+                ggdl {r疯癫的老头}?;
+                go north[4];
+                @await 250;
+                go north[2];look shi;tiao1 shi;tiao3 shi;
+                @await 250;
+                tiao1 shi;tiao3 shi;tiao2 shi;go north;"

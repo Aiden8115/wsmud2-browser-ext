@@ -65,7 +65,7 @@ Object.assign(WG, {
               send_cmd(cmd, true);
           } else {
               if (cmd) {
-                  cmd = cmd instanceof Array ? cmd : cmd.split(';');
+                  cmd = Array.isArray(cmd) ? cmd : cmd.split(';');
                   for (var c of cmd) {
                       $("span[WG='WG']").attr("cmd", c).click();
                   }
@@ -74,7 +74,7 @@ Object.assign(WG, {
       },
       SendStep: async function (cmd) {
           if (cmd) {
-              cmd = cmd instanceof Array ? cmd : cmd.split(';');
+              cmd = Array.isArray(cmd) ? cmd : cmd.split(';');
               for (var c of cmd) {
                   WG.SendCmd(c);
                   await WG.sleep(12000);
@@ -84,7 +84,7 @@ Object.assign(WG, {
       SendCmd: async function (cmd) {
           if (cmd) {
               if (cmd.indexOf(",") >= 0) {
-                  if (cmd instanceof Array) {
+                  if (Array.isArray(cmd)) {
                       cmd = cmd;
                   } else {
                       if (cmd.indexOf(";") >= 0) {
@@ -94,7 +94,7 @@ Object.assign(WG, {
                       }
                   }
               } else {
-                  cmd = cmd instanceof Array ? cmd : cmd.split(';');
+                  cmd = Array.isArray(cmd) ? cmd : cmd.split(';');
               }
               let idx = 0;
               let cmds = '';

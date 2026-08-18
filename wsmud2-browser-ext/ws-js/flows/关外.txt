@@ -1,0 +1,38 @@
+@print 👑 感谢 老实人 分享此副本代码。
+jh fb 9 start1;cr bj/guanwai/damen
+go northeast
+@kill 金雕
+go east
+@kill 金雕
+go southeast
+@kill 金雕
+go east
+@kill 平四
+go north
+select {r胡斐}
+ask {r胡斐} about 阎基
+@tip 胡斐说道：阎基是我的杀父仇人($chat)
+[if] (chat) == ，
+        give {r胡斐} {b阎基的头颅}
+        ask {r胡斐} about 胡家刀谱
+[if] (_DungeonWaitSkillCD) == 打开
+    @cd
+@kill 胡斐
+go south;go east
+@kill 东北虎
+go eastup
+@kill 东北虎
+go southup
+@kill 东北虎
+[if] (_DungeonWaitSkillCD) == 打开
+    @cd
+go eastup
+@kill 黑熊
+go westdown;go northdown;go west[2];go northwest
+go west;go southwest;go west
+give {r船夫} 10000 money
+@until (:room)==关外-船厂(副本区域)
+@wait 500
+@kill 船夫
+go south;go west[5];go north
+@kill 江湖医生 阎基
