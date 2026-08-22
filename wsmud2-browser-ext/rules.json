@@ -1,0 +1,12 @@
+[
+  {
+    "id": 1,
+    "priority": 1,
+    "action": { "type": "block" },
+    "condition": {
+      "urlFilter": "/dist/ws.js",
+      "requestDomains": ["wsmud2.com","120.79.248.245", "wsmud2.cn"],
+      "resourceTypes": ["script"]
+    }
+  }
+]

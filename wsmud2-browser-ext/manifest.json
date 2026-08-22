@@ -1,0 +1,112 @@
+{
+  // ============================================================
+  // manifest.json —— 扩展的"身份证"
+  // Chrome 扩展的一切声明都在这里：
+  //   叫什么名字、要哪些权限、往哪些网页里塞脚本、后台用什么文件等。
+  // 注意：manifest.json 里的注释需要 Chrome 116 以上版本才支持。
+  //       如果 Chrome 报"清单解析失败"，把 // 开头的行删掉即可。
+  // ============================================================
+
+  // 清单版本号：3 = 新版扩展规范（MV3），不要改，Chrome 已废弃 MV2
+  "manifest_version": 3,
+
+  // 扩展显示名称（在 chrome://extensions 和右键菜单里显示）
+  "name": "WSMUD 插件",
+
+  // 扩展版本号：改这里后，chrome://extensions 页面会显示新版本
+  "version": "26.3.8",
+
+  // 扩展简介（chrome://extensions 里能看到）
+  "description": "增强《MUD游戏，武神传说》的游戏体验",
+
+  // 权限声明：申请访问浏览器的哪些能力
+  // 【2026-08-14】去掉了 tabs 权限：popup 的 tabs.query/sendMessage 靠 host_permissions 即可，
+  // tabs.create 也不需要该权限；去掉后 chrome://extensions 的权限提示更收敛
+  "permissions": [
+    "storage",             // 本地存储（保存开关状态等）
+    "declarativeNetRequest" // 网络拦截（用 rules.json 屏蔽游戏旧脚本）
+  ],
+
+  // 主权限：允许在哪些网站（域名）上运行本扩展
+  "host_permissions": [
+    "*://*.wsmud2.com/*",      // 游戏官网
+    "*://120.79.248.245/*",    // 游戏备用 IP 地址
+    "*://*.wsmud2.cn/*"        // 游戏官网（备用域名）
+  ],
+
+  // 网络拦截规则：声明要使用 rules.json 这个规则文件
+  "declarative_net_request": {
+    "rule_resources": [
+      {
+        "id": "ruleset_1",     // 规则集编号（随便起，但别和别的重复）
+        "enabled": true,       // 是否启用
+        "path": "rules.json"   // 规则文件路径
+      }
+    ]
+  },
+
+  // 内容脚本：往哪些网页注入哪些 JS
+  "content_scripts": [
+    {
+      // 只在游戏域名上注入
+      "matches": [
+        "*://*.wsmud2.com/*",
+        "*://120.79.248.245/*",
+        "*://*.wsmud2.cn/*"
+      ],
+      // 注入的文件：只有一个 content.js
+      // （content.js 会再把其它 30 多个脚本按顺序塞进页面）
+      "js": [
+        "content.js"
+      ],
+      // document_start = 页面一开始加载就注入（越早越好，这样才能抢在游戏脚本前接管 WebSocket）
+      "run_at": "document_start"
+    }
+  ],
+
+  // 网页可访问资源：页面里的脚本能通过 chrome.runtime.getURL() 拿到的文件
+  // （游戏页面属于"普通网页"，默认拿不到扩展内部文件，必须在这里白名单授权）
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "ws-js/**/*.js",                          // 所有插件脚本
+        "ws-js/lib/skin/**",                       // 【2026-08-11 26.1.10】layer.js 加载时请求的 skin/layer.css 及 default/* 皮肤图（layer 2.3）
+        "ws-js/lib/fonts/**",                      // 【2026-08-14 26.1.26】font-awesome 本地化字体（font-awesome.css 引用的 ../fonts/*）
+        "ws-data/complete.mp3",                   // 提示音
+        "ws-data/JetBrainsMono-Regular.woff2",    // 代码字体
+        "ws-data/武神2综合工具网页版.html",          // 内置工具网页
+        "ws-data/tailwind-config.js",             // 工具网页样式配置
+        "ws-data/tailwind.js",                    // 工具网页样式库
+        "ws-data/武神2综合工具网页版-data.js",        // 工具网页数据
+        "ws-data/武神2综合工具网页版.js"              // 工具网页逻辑
+      ],
+      // 只有游戏页面能访问（防止其它网站偷用）
+      "matches": [
+        "*://*.wsmud2.com/*",
+        "*://120.79.248.245/*",
+        "*://*.wsmud2.cn/*"
+      ]
+    }
+  ],
+
+  // 后台脚本：MV3 里叫 Service Worker（平时睡觉，收到消息才醒来干活）
+  "background": {
+    "service_worker": "background.js"
+  },
+
+  // 安全策略：只允许加载扩展自己的脚本（默认配置，不用动）
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; object-src 'self'"
+  },
+
+  // 工具栏上的插件图标按钮：点击后弹出的控制面板
+  "action": {
+    "default_popup": "popup.html",   // 弹窗页面
+    "default_title": "WSMUD 插件控制" // 鼠标悬停显示的文字
+  },
+
+  // 扩展图标（128 像素版本）
+  "icons": {
+    "128": "ws-data/icon128.png"
+  }
+}
