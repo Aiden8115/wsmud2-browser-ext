@@ -1,0 +1,1726 @@
+<!DOCTYPE html>
+<!-- ==========================================================
+     武神2综合工具网页版.html —— 扩展自带的独立工具网页
+     ----------------------------------------------------------
+     从插件图标/右键菜单打开，独立于游戏运行，
+     提供攻略查询、数据计算等功能。
+     逻辑在同目录的 武神2综合工具网页版.js，
+     数据（副本攻略等）在同目录的 武神2综合工具网页版-data.js。
+     ========================================================== -->
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>游戏计算工具</title>
+    <!-- 引入Tailwind JavaScript -->
+    <script src="tailwind.js"></script>
+    <!-- Tailwind配置：自定义颜色、字体 -->
+    <script src="tailwind-config.js"></script>
+    <style type="text/tailwindcss">
+        @layer utilities {
+            .content-auto {
+                content-visibility: auto;
+            }
+            .sidebar-item {
+                @apply py-3 px-4 cursor-pointer transition-all duration-200 text-primary hover:bg-gray-500;
+            }
+            .sidebar-item.active {
+                @apply bg-accent text-white;
+            }
+            .content-section {
+                @apply hidden;
+            }
+            .content-section.active {
+                @apply block;
+            }
+            input::-webkit-outer-spin-button,
+              input::-webkit-inner-spin-button {
+                -webkit-appearance: none;
+                margin: 0;
+              }
+            /* 选中选项的样式 */
+            .selected-option {
+                background-color: rgba(0, 113, 227, 0.1);
+                font-weight: bold;
+            }
+        }
+        
+        /* 文字颜色样式库 - 使用layer base确保优先级 */
+        @layer base {
+            .HIW {
+                color: #FFFFFF;
+            }
+            .HIG {
+                color: #00FF00;
+            }
+            .HIC {
+                color: #00FFFF;
+            }
+            .HIY {
+                color: #FFFF00;
+            }
+            .HIO {
+                color: #FF8C00;
+            }
+            .HIZ {
+                color: #912CEE;
+            }
+            .HIR {
+                color: #FF0000;
+            }
+            .grids-container {
+                display: grid;
+                /* 电脑端4列，每列最大120px */
+                grid-template-columns: repeat(4, minmax(0, 1fr));
+                gap: 30px;
+                padding: 15px;
+                max-width: 800px; /* 限制整体最大宽度 */
+                margin: 0 auto; /* 居中显示 */
+            }
+        
+            .magic-square {
+                display: grid;
+                grid-template-columns: repeat(3, 1fr);
+                aspect-ratio: 1/1;
+                font-size: 24px;
+                max-width: 200px; /* 单个九宫格最大宽度 */
+                margin: 0 auto; /* 居中每个九宫格 */
+            }
+            
+            .magic-square span {
+                border: 1px solid #333;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            }
+            
+            /* 统一输入框样式 */
+            .form-input {
+                @apply text-center bg-[#444444] rounded-md focus:outline-none focus:ring-2 focus:ring-accent/50;
+                -moz-appearance: textfield;
+            }
+            
+            /* 装备表格样式 */
+            .equipment-table {
+                width: 100%;
+                text-align: center;
+                border-collapse: separate;
+                border-spacing: 0;
+                border-radius: 8px;
+                border: 1px solid #333333;
+                overflow: hidden;
+            }
+            
+            .equipment-table th,
+            .equipment-table td {
+                padding: 0.8rem 0;
+                text-align: center;
+                font-size: 16px;
+            }
+            
+            .equipment-table th:first-child,
+            .equipment-table td:first-child {
+                border-left: 1px solid #444444;
+            }
+            
+            .equipment-table th {
+                border-top: 1px solid #444444;
+            }
+            
+            @media (max-width: 768px) {
+                .grids-container {
+                    grid-template-columns: repeat(2, 1fr);
+                    max-width: 400px; /* 手机端整体最大宽度 */
+                }
+                
+                .magic-square {
+                    font-size: 16px;
+                    max-width: 100%; /* 手机端占满可用宽度 */
+                }
+                
+                .equipment-table th,
+                .equipment-table td {
+                    font-size: 13px;
+                }
+            }
+        }
+    </style>
+</head>
+<body class="bg-background font-sans text-primary text-base min-h-screen flex flex-col md:flex-row">
+    <!-- 顶部菜单，仅手机显示 -->
+    <div class="md:hidden flex items-center justify-between px-4 py-2 bg-sidebar shadow">
+        <button id="mobileMenuBtn" class="text-2xl">≡</button>
+        <span class="font-bold text-primary text-lg">武神传说工具</span>
+    </div>
+    <!-- 移动端弹出菜单 -->
+    <div id="mobileMenu" class="fixed top-0 left-0 w-3/4 max-w-xs h-full bg-sidebar z-50 shadow-lg transform -translate-x-full transition-transform duration-300 md:hidden">
+        <div class="flex flex-col p-4">
+            <button id="mobileMenuClose" class="self-end mb-4 text-xl">×</button>
+            <div class="mobile-sidebar-item py-3 px-4 cursor-pointer text-primary hover:bg-gray-500" data-target="intro">首页</div>
+            <div class="mobile-sidebar-item py-3 px-4 cursor-pointer text-primary hover:bg-gray-500" data-target="section1">计算</div>
+            <div class="mobile-sidebar-item py-3 px-4 cursor-pointer text-primary hover:bg-gray-500" data-target="section2">精炼</div>
+            <div class="mobile-sidebar-item py-3 px-4 cursor-pointer text-primary hover:bg-gray-500" data-target="section3">副本</div>
+            <div class="mobile-sidebar-item py-3 px-4 cursor-pointer text-primary hover:bg-gray-500" data-target="section4">技/装</div>
+            <div class="mobile-sidebar-item py-3 px-4 cursor-pointer text-primary hover:bg-gray-500" data-target="section5">门派</div>
+            <div class="mobile-sidebar-item py-3 px-4 cursor-pointer text-primary hover:bg-gray-500" data-target="section6">丹方</div>
+            <div class="mobile-sidebar-item py-3 px-4 cursor-pointer text-primary hover:bg-gray-500" data-target="section7">随从</div>
+            <div class="mobile-sidebar-item py-3 px-4 cursor-pointer text-primary hover:bg-gray-500" data-target="section8">扩展</div>
+            <div class="mobile-sidebar-item py-3 px-4 cursor-pointer text-primary hover:bg-gray-500" data-target="section9">自制</div>
+        </div>
+    </div>
+    <div id="mobileMenuMask" class="fixed inset-0 bg-black bg-opacity-30 z-40 hidden md:hidden"></div>
+
+    <!-- 左侧导航栏（固定） -->
+    <div id="sidebar" class="bg-sidebar w-20 flex-shrink-0 transition-all duration-300 ease-in-out h-screen flex flex-col hidden md:flex">
+        <button id="toggleBtn" class="mt-4 mb-6 self-center py-2 px-3 border border-[#444444] bg-[#333333] text-white hover:bg-[#444444] transition-colors rounded-lg">
+            <span class="full-text hidden">展开</span>
+            <span class="short-text">≡</span>
+        </button>
+        <div class="flex-grow overflow-y-auto">
+            <div class="sidebar-item" data-target="intro">
+                <span class="full-text hidden">首页</span>
+                <span class="short-text">首页</span>
+            </div>
+            <div class="sidebar-item active" data-target="section1">
+                <span class="full-text hidden">计算工具</span>
+                <span class="short-text">计算</span>
+            </div>
+            <div class="sidebar-item" data-target="section2">
+                <span class="full-text hidden">玄晶精炼</span>
+                <span class="short-text">精炼</span>
+            </div>
+            <div class="sidebar-item" data-target="section3">
+                <span class="full-text hidden">副本攻略</span>
+                <span class="short-text">副本</span>
+            </div>
+            <div class="sidebar-item" data-target="section4">
+                <span class="full-text hidden">技能、装备属性</span>
+                <span class="short-text">技/装</span>
+            </div>
+            <div class="sidebar-item" data-target="section5">
+                <span class="full-text hidden">门派拜师、装备</span>
+                <span class="short-text">门派</span>
+            </div>
+            <div class="sidebar-item" data-target="section6">
+                <span class="full-text hidden">炼药配方</span>
+                <span class="short-text">丹方</span>
+            </div>
+            <div class="sidebar-item" data-target="section7">
+                <span class="full-text hidden">随从属性</span>
+                <span class="short-text">随从</span>
+            </div>
+            <div class="sidebar-item" data-target="section8">
+                <span class="full-text hidden">扩展使用</span>
+                <span class="short-text">扩展</span>
+            </div>
+            <div class="sidebar-item" data-target="section9">
+                <span class="full-text hidden">装备自制</span>
+                <span class="short-text">自制</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- 右侧主内容区域（可滚动） -->
+    <div class="flex-grow overflow-hidden">
+        <div class="h-full p-3 md:p-6 overflow-y-auto">
+            <div class="bg-[#222222] rounded-lg md:rounded-xl p-3 md:p-6 shadow-sm">
+                <div id="intro" class="mb-8">
+                    <h1 class="text-[24px] md:text-[28px] font-semibold text-white mb-4">武神传说游戏工具</h1>
+                    <p class="text-[15px] md:text-[16px] text-white text-secondary mb-4">欢迎使用武神传说游戏工具网页版，<b style="font-weight: 900;">点击左侧菜单按钮查看所有功能。</b><br>部分资料来自官方群1016978428，有问题或建议可在官方群内@我或私聊。by——海东青。</p>
+                </div>
+                
+                <!-- 板块1：计算工具 -->
+                <div id="section1" class="content-section active">
+                    <div class="flex items-center gap-4 flex-wrap">
+                        <h2 class="text-[20px] md:text-[24px] font-medium text-white mb-2">计算工具</h2>
+                        <!-- 插入计算器 -->
+                        <div class="inline-block">
+                            <!-- 显示/隐藏按钮 -->
+                            <button id="calcToggleBtn" class="bg-[#333333] hover:bg-[#444444] text-white font-medium py-2 px-4 rounded transition-all duration-300 shadow-sm hover:shadow mb-2">
+                                <i class="fa fa-calculator mr-1"></i> 计算器
+                            </button>
+                        </div>
+                        <!-- 计算面板 - 显示在按钮下方，采用插入式布局 -->
+                        <div id="calcPanel" class="hidden -mt-4 w-full bg-[#222222] p-4 rounded-lg shadow-md transition-all duration-300 opacity-0 transform translate-y-2">
+                            <div class="flex flex-row items-center gap-3 w-full">
+                                <input 
+                                    type="text" 
+                                    id="inputExpr" 
+                                    placeholder="输入计算式" 
+                                    class="px-4 py-3 bg-[#333333] text-white border border-[#444444] rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all duration-300 w-40 md:w-80"
+                                >
+                                <div class="bg-green-500 text-white font-bold py-0.5 px-2 rounded-lg">=</div>
+                                <div id="result" class="bg-[#333333] text-white px-4 py-3 rounded-lg min-h-[45px] transition-all duration-300 w-40 md:w-40">-</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 电脑端左右布局容器 -->
+                    <div class="flex flex-col md:flex-row gap-4">
+                        <!-- 左侧：潜能计算区域 -->
+                        <div class="md:w-1/2">
+                            <div class="flex flex-row items-center mb-2 border border-[#444444] p-4 rounded-lg max-w-full">
+                                <h3 class="text-[14px] md:text-[18px] border border-[#444444] bg-[#222222] rounded-md p-2 -ml-2">潜能<br>计算</h3>
+                                <div class="flex flex-row gap-2 ml-8">
+                                    <div>
+                                        <label for="paramA" class="block text-[12px] text-white mb-1 -ml-6 -mr-2 md:ml-0 md:mr-0 md:text-[16px] ">先天悟性</label>
+                                        <input type="number" id="paramA" class="form-input w-8 -ml-4 md:w-24 h-8">
+                                    </div>
+                                    <div>
+                                        <label for="paramB" class="block text-[12px] md:text-[16px] text-white mb-1">后天悟性</label>
+                                        <input type="number" id="paramB" class="form-input w-12 px-1 md:w-24 h-8">
+                                    </div>
+                                    <div>
+                                        <label for="paramC" class="block text-[12px] md:text-[16px] text-white mb-1">效率%</label>
+                                        <input type="number" id="paramC" class="form-input w-10 md:w-24 h-8" >
+                                    </div>
+                                    <div>
+                                        <label class="block text-[12px] ml-2 md:text-[16px] text-white mb-1">练习速度</label>
+                                        <input type="number" id="practiceSpeed" class="form-input w-14 ml-1 md:w-20 h-8" value="0">
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="overflow-x-auto overflow-y-auto pr-2 -ml-1 -mr-3 w-full">
+                                <table class="equipment-table">
+                                    <thead>
+                                        <tr>
+                                            <th class="px-2 py-1 bg-[#333333] text-[13px] md:text-[16px] font-medium text-white rounded-tl-lg" style="width: 20%;">技能</th>
+                                            <th class="px-3 py-1 bg-[#333333] text-[13px] md:text-[16px] font-medium text-white">起始等级</th>
+                                            <th class="px-3 py-1 bg-[#333333] text-[13px] md:text-[16px] font-medium text-white">最终等级</th>
+                                            <th class="px-3 py-1 bg-[#333333] text-[13px] md:text-[16px] font-medium text-white">消耗潜能</th>
+                                            <th class="px-1 py-1 bg-[#333333] text-[13px] md:text-[16px] font-medium text-white rounded-tr-lg">时间</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="bg-[#222222] divide-y divide-[#444444]" id="calculationTable">
+                                        <tr class="bg-[#222222]">
+                                            <td class="px-2 py-1 text-[15px] font-medium whitespace-nowrap text-white"> 白</td>
+                                            <td class="px-1 py-3">
+                                                <input type="text" class="d-input w-12 md:w-24 h-8 text-sm md:text-[18px] md:py-2 px-1 form-input">
+                                            </td>
+                                            <td class="px-1 py-3">
+                                                <input type="text" class="e-input w-12 md:w-24 h-8 text-sm md:text-[18px] md:py-2 px-1 form-input">
+                                            </td>
+                                            <td class="px-1 py-3">
+                                                <input type="text" class="result1-input w-20 md:w-32 h-8 text-sm md:text-[18px] md:py-2 px-1 form-input">
+                                            </td>
+                                            <td class="px-2 py-3 result2 text-[15px] text-white">-</td>
+                                        </tr>
+                                        <tr class="bg-[#2a2a2a]">
+                                            <td class="px-2 py-1 text-[15px] font-medium whitespace-nowrap HIG"> 绿</td>
+                                            <td class="px-1 py-3">
+                                                <input type="text" class="d-input w-12 md:w-24 h-8 text-sm md:text-[18px] md:py-2 px-1 form-input">
+                                            </td>
+                                            <td class="px-1 py-3">
+                                                <input type="text" class="e-input w-12 md:w-24 h-8 text-sm md:text-[18px] md:py-2 px-1 form-input">
+                                            </td>
+                                            <td class="px-1 py-3">
+                                                <input type="text" class="result1-input w-20 md:w-32 h-8 text-sm md:text-[18px] md:py-2 px-1 form-input">
+                                            </td>
+                                            <td class="px-2 py-3 result2 text-[15px] text-white">-</td>
+                                        </tr>
+                                        <tr class="bg-[#222222]">
+                                            <td class="px-2 py-1 text-[15px] font-medium whitespace-nowrap HIC"> 蓝</td>
+                                            <td class="px-1 py-3">
+                                                <input type="text" class="d-input w-12 md:w-24 h-8 text-sm md:text-[18px] md:py-2 px-1 form-input">
+                                            </td>
+                                            <td class="px-1 py-3">
+                                                <input type="text" class="e-input w-12 md:w-24 h-8 text-sm md:text-[18px] md:py-2 px-1 form-input">
+                                            </td>
+                                            <td class="px-1 py-3">
+                                                <input type="text" class="result1-input w-20 md:w-32 h-8 text-sm md:text-[18px] md:py-2 px-1 form-input">
+                                            </td>
+                                            <td class="px-2 py-3 result2 text-[15px] text-white">-</td>
+                                        </tr>
+                                        <tr class="bg-[#2a2a2a]">
+                                            <td class="px-2 py-1 text-[15px] font-medium whitespace-nowrap HIY"> 黄</td>
+                                            <td class="px-1 py-3">
+                                                <input type="text" class="d-input w-12 md:w-24 h-8 text-sm md:text-[18px] md:py-2 px-1 form-input">
+                                            </td>
+                                            <td class="px-1 py-3">
+                                                <input type="text" class="e-input w-12 md:w-24 h-8 text-sm md:text-[18px] md:py-2 px-1 form-input">
+                                            </td>
+                                            <td class="px-1 py-3">
+                                                <input type="text" class="result1-input w-20 md:w-32 h-8 text-sm md:text-[18px] md:py-2 px-1 form-input">
+                                            </td>
+                                            <td class="px-2 py-3 result2 text-[15px] text-white">-</td>
+                                        </tr>
+                                        <tr class="bg-[#222222]">
+                                            <td class="px-2 py-1 text-[15px] font-medium whitespace-nowrap HIZ"> 紫</td>
+                                            <td class="px-1 py-3">
+                                                <input type="text" class="d-input w-12 md:w-24 h-8 text-sm md:text-[18px] md:py-2 px-1 form-input">
+                                            </td>
+                                            <td class="px-1 py-3">
+                                                <input type="text" class="e-input w-12 md:w-24 h-8 text-sm md:text-[18px] md:py-2 px-1 form-input">
+                                            </td>
+                                            <td class="px-1 py-3">
+                                                <input type="text" class="result1-input w-20 md:w-32 h-8 text-sm md:text-[18px] md:py-2 px-1 form-input">
+                                            </td>
+                                            <td class="px-2 py-3 result2 text-[15px] text-primary">-</td>
+                                        </tr>
+                                        <tr class="bg-[#333333]">
+                                            <td class="px-2 py-1 text-[15px] font-medium whitespace-nowrap HIO"> 橙</td>
+                                            <td class="px-1 py-3">
+                                                <input type="text"  class="d-input w-12 md:w-24 h-8 text-sm md:text-[18px] md:py-2 px-1 form-input">
+                                            </td>
+                                             <td class="px-1 py-3">
+                                                <input type="text" class="e-input w-12 md:w-24 h-8 text-sm md:text-[18px] md:py-2 px-1 form-input">
+                                            </td>
+                                            <td class="px-1 py-3">
+                                                <input type="text" class="result1-input w-20 md:w-32 h-8 text-sm md:text-[18px] md:py-2 px-1 form-input">
+                                            </td>
+                                            <td class="px-2 py-3 result2 text-[15px] text-primary">-</td>
+                                        </tr>
+                                        <tr class="bg-[#222222]">
+                                            <td class="px-2 py-1 text-[15px] font-medium whitespace-nowrap HIR"> 红</td>
+                                            <td class="px-1 py-3">
+                                                <input type="text" class="d-input w-12 md:w-24 h-8 text-sm md:text-[18px] md:py-2 px-1 form-input">
+                                            </td>
+                                             <td class="px-1 py-3">
+                                                <input type="text" class="e-input w-12 md:w-24 h-8 text-sm md:text-[18px] md:py-2 px-1 form-input">
+                                            </td>
+                                            <td class="px-1 py-3">
+                                                <input type="text" class="result1-input w-20 md:w-32 h-8 text-sm md:text-[18px] md:py-2 px-1 form-input">
+                                            </td>
+                                            <td class="px-2 py-3 result2 text-[15px] text-primary">-</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                        
+                        <!-- 右侧：技能上限和开花计算区域 -->
+                        <div class="md:w-1/2">
+                          <!-- 技能等级上限经验计算 -->
+                          <div class="flex flex-row items-center md:items-start gap-4 p-4 border border-[#444444] rounded-lg shadow-sm overflow-x-auto md:my-0">
+                              <h3 class="text-[16px] md:text-[18px] font-bold text-white whitespace-nowrap -ml-2 mt-2 letter-spacing-[0.3px] border border-[#444444] bg-[#222222] rounded-md p-2">技能<br>上限</h3>
+                              
+                              <!-- 下拉选择列表 - 同层级水平布局 -->
+                              <div class="w-auto flex-shrink-0">
+                                  <label class="block text-[14px] text-white mb-1 mr-2">境界</label>
+                                  <select id="skillType" class="w-14 -ml-1 md:w-20 px-0 py-2 form-input text-[14px]" onchange="applySelectedOptionStyle(this)">
+                                      <option value="1" data-coefficient="1.0" class="HIW">百姓</option>
+                                      <option value="2" data-coefficient="2.0" class="HIW">武士</option>
+                                      <option value="3" data-coefficient="3.0" class="HIG">武师</option>
+                                      <option value="4" data-coefficient="4.0" class="HIY">宗师</option>
+                                      <option value="1" data-coefficient="5.0" class="HIZ">武圣</option>
+                                      <option value="2" data-coefficient="6.0" class="HIO">武帝</option>
+                                      <option value="3" data-coefficient="6.0" class="HIR">武神</option>
+                                  </select>
+                              </div>
+                              
+                              <!-- 等级上限输入框 - 同层级水平布局 -->
+                              <div class="w-auto flex-shrink-0">
+                                  <label class="block text-[14px] -ml-2 mb-1">等级上限</label>
+                                  <input type="number" id="levelCap" min="1" value="1" 
+                                      class="w-12 -ml-2 md:w-20 text-[14px] py-2  form-input">
+                              </div>
+                              
+                              <!-- 需求经验展示 - 同层级水平布局 -->
+                              <div class="w-auto flex-shrink-0">
+                                  <label class="block text-[14px] text-white mb-1 -ml-2">需求经验</label>
+                                  <div id="requiredExp" class="w-16 -ml-2 md:w-32 px-0 rounded-md min-h-[38px] flex items-center">
+                                      -
+                                  </div>
+                              </div>
+                          </div>
+
+                          <!-- 开花计算 -->
+                          <div class="flex flex-row items-center md:items-start gap-4 p-4 border border-[#444444] rounded-lg shadow-sm overflow-x-auto md:my-10">
+                            <h3 class="text-[16px] md:text-[18px] font-bold text-white whitespace-nowrap -ml-2 mt-2 letter-spacing-[0.3px] border border-[#444444] bg-[#222222] rounded-md p-2">开花<br>计算</h3>
+                            
+                            <!-- 当前内力输入框 -->
+                            <div class="w-auto flex-shrink-0">
+                                <label class="block text-[12px] md:text-[16px] text-white mb-1 ml-1 md:mr-0">当前内力</label>
+                                <input type="number" id="currentNeili" min="0" value="0" 
+                                    class="w-16 -ml-2 md:w-20 px-1 py-2 form-input">
+                            </div>
+                            
+                            <!-- 先天根骨输入框 -->
+                            <div class="w-auto flex-shrink-0">
+                                <label class="block text-[12px] md:text-[16px] text-white mb-1 -ml-3 md:ml-0 md:mr-0">先天根骨</label>
+                                <input type="number" id="innateBone" min="0" max="100" value="0" 
+                                    class="w-10 -ml-3 md:ml-0 md:mr-0 md:w-12 px-1 py-2 form-input">
+                            </div>
+                            
+                            <!-- 后天根骨输入框 -->
+                            <div class="w-auto flex-shrink-0">
+                                <label class="block text-[12px] md:text-[16px] text-white mb-1 -ml-4 md:ml-0 md:mr-0">后天根骨</label>
+                                <input type="number" id="acquiredBone" min="0" max="100" value="0" 
+                                    class="w-10 -ml-4 md:ml-0 md:mr-0 md:w-16 px-1 py-2 form-input">
+                            </div>
+                            
+                            <!-- 分值结果展示 -->
+                            <div class="w-auto flex-shrink-0">
+                                <label class="block text-[14px] md:text-[16px] text-white mb-1 -ml-2 md:ml-6 ">分值</label>
+                                <div id="flowerScore" class="w-14 -ml-6 md:w-32 px-0 py-2 min-h-[38px] flex items-center justify-center">
+                                    -
+                                </div>
+                            </div>
+                        </div>
+                        <!-- 开花要求按钮和文本框 -->
+                        <div class="mb-1 md:-mt-8">
+                          <button id="flowerRequirementsBtn" class="px-4 text-[13px] md:text-[16px] text-primary border border-primary/50 rounded-md hover:bg-primary/10 transition-colors">
+                              开花要求
+                          </button>
+                          <div id="flowerRequirementsText" class="hidden p-3 bg-[#222222] rounded-md text-[13px] md:text-[16px] text-white max-w-2xl">
+                              分值要求:
+                              <br>人花＞5000 地花＞6500 天花＞8000
+                              <br>具体属性：
+                              <br>打人地花15万，普a11下，人花防御5000，地花防御10000
+                              <br>人花攻击要17000、地花攻击要20000
+                              <br>天花挨打，45万血
+                          </div>
+                        </div>
+                          <div class="flex flex-row items-center md:items-start gap-4 py-4 border border-[#444444] rounded-lg shadow-sm overflow-x-auto md:my-10">
+                              <h3 class="text-[16px] md:text-[18px] font-bold whitespace-nowrap -ml-2 border border-[#444444] bg-[#222222] rounded-md p-2 ml-2">属性<br>收益</h3>
+                              <div class="flex flex-col w-full">
+                                  <div>先天臂力*1=攻击:1、招架:0.5</div>
+                                  <div>后天臂力*1=攻击:先天臂力*0.1、招架:先天臂力*0.1</div>
+                                  <div>先天根骨*1=气血:5、打坐疗伤效率。</div>
+                                  <div>后天根骨*1=气血:先天根骨*1、防御:先天根骨*1</div>
+                                  <div>先天悟性*1=学习效率:1%、练习效率:2%</div>
+                              </div>
+                          </div>
+                        </div>
+                    </div>
+                    
+                    
+
+                    
+                </div>
+                
+                <!-- 板块2：精炼计算 -->
+                <div id="section2" class="content-section">
+                    <div class="flex items-center gap-4 flex-wrap">
+                        <h2 class="text-[20px] md:text-[24px] font-medium text-white mb-2">精炼计算</h2>
+                    </div>
+                    
+                    <div class="mt-4">
+                        <h3 class="text-[18px] md:text-[20px] font-bold text-white mb-4">练习速度精炼最优解计算</h3>
+                        
+                        <div class="flex flex-wrap gap-2 mb-4">
+                            <div class="w-auto">
+                                <label class="block text-[14px] text-white mb-1">玄晶总量</label>
+                                <input type="number" id="CrystalNum" value="" 
+                                    class="w-20 px-1 py-2 form-input md:w-24">
+                            </div>
+                            <div class="w-auto">
+                                <label class="block text-[14px] text-white mb-1">先天悟性</label>
+                                <input type="number" id="InitialIQ" value="" 
+                                    class="w-12 px-1 py-2 form-input md:w-16">
+                            </div>
+                            <div class="w-auto">
+                                <label class="block text-[14px] text-white mb-1">基础悟性</label>
+                                <input type="number" id="BaseIQ" value="" 
+                                    class="w-12 px-1 py-2 form-input md:w-16">
+                            </div>
+                            <div class="w-auto">
+                                <label class="block text-[14px] text-white mb-1">基础效率</label>
+                                <input type="number" id="BaseEff" value="" 
+                                    class="w-12 px-1 py-2 form-input md:w-16">
+                            </div>
+                            
+                        </div>
+                        
+                        <div class="p-3 bg-[#222222] rounded-md text-[14px] md:w-1/2 text-white mb-4 ">
+                            <span>基础悟性：来自技能等；基础效率：来自练功房等buff。检查方法：脱去全部装备，检查当前悟性效率再加上装备套装。</span>
+                        </div>
+                        
+                        <div class="flex flex-col md:flex-row gap-4 items-center">
+                            <div class="overflow-x-auto max-h-[700px] overflow-y-auto pr-2 mb-4 md:w-2/7">
+                                <table class="min-w-full  md:w-full" style="text-align: center;">
+                                    <thead>
+                                        <tr>
+                                            <th class="px-2 py-2 bg-[#444444] text-[13px] md:text-[16px] font-medium text-white rounded-tl-lg w-24 md:w-14">部位</th>
+                                            <th class="px-2 py-2 bg-[#444444] text-[13px] md:text-[16px] font-medium text-white w-24 md:w-14">级别</th>
+                                            <th class="px-8 py-2 bg-[#444444] text-[13px] md:text-[16px] font-medium text-white w-40 md:w-32">名字</th>
+                                            <th class="px-2 py-2 bg-[#444444] text-[13px] md:text-[16px] font-medium text-white w-20 md:w-20">悟性</th>
+                                            <th class="px-2 py-2 bg-[#444444] text-[13px] md:text-[16px] font-medium text-white w-20 rounded-tr-lg md:w-20">效率</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="divide-y divide-[#444444]" id="Table">
+                                    <!-- 11行表格 -->
+                                    <tr class="bg-[#333333]">
+                                        <td class="px-2 py-3 text-[15px] font-medium whitespace-nowrap text-white">武器</td>
+                                        <td class="py-3 text-[15px] font-medium whitespace-nowrap">
+                                            <select id="quality1" name="quality" class="w-full py-1 form-input" onchange="applySelectedOptionStyle(this)">
+                                                <option value="1" class="HIC">蓝</option>
+                                                <option value="2" class="HIY">黄</option>
+                                                <option value="3" class="HIZ">紫</option>
+                                                <option value="4" class="HIO">橙</option>
+                                                <option value="5" class="HIR">红</option>
+                                            </select>
+                                        </td>
+                                        <td class="px-2 py-3">
+                                            <input type="text" id="name1" name="name" class="w-full px-2 py-1 form-input md:w-40">
+                                        </td>
+                                        <td class="px-2 py-3">
+                                            <input type="number" id="IQ1" name="IQ" class="w-full py-1 form-input md:w-20">
+                                        </td>
+                                        <td class="px-2 py-3">
+                                            <input type="number" id="eff1" name="eff" class="w-full py-1 form-input md:w-20">
+                                        </td>
+                                    </tr>
+                                    <tr class="bg-[#222222]">
+                                        <td class="px-2 py-3 text-[15px] font-medium whitespace-nowrap">衣服</td>
+                                        <td class="py-3 text-[15px] font-medium whitespace-nowrap">
+                                           <select id="quality2" name="quality" class="w-full py-1 form-input" onchange="applySelectedOptionStyle(this)">
+                                                <option value="1" class="HIC">蓝</option>
+                                                <option value="2" class="HIY">黄</option>
+                                                <option value="3" class="HIZ">紫</option>
+                                                <option value="4" class="HIO">橙</option>
+                                                <option value="5" class="HIR">红</option>
+                                            </select>
+                                        </td>
+                                        <td class="px-2 py-3">
+                                            <input type="text" id="name2" name="name" class="w-full px-2 py-1 form-input md:w-40">
+                                        </td>
+                                        <td class="px-2 py-3">
+                                            <input type="number" id="IQ2" name="IQ" class="w-full py-1 form-input md:w-20">
+                                        </td>
+                                        <td class="px-2 py-3">
+                                            <input type="number" id="eff2" name="eff" class="w-full py-1 form-input md:w-20">
+                                        </td>
+                                    </tr>
+                                    <tr class="bg-[#333333]">
+                                        <td class="px-2 py-3 text-[15px] font-medium whitespace-nowrap text-white">鞋</td>
+                                        <td class="py-3 text-[15px] font-medium whitespace-nowrap">
+                                           <select id="quality3" name="quality" class="w-full py-1 form-input" onchange="applySelectedOptionStyle(this)">
+                                                <option value="1" class="HIC">蓝</option>
+                                                <option value="2" class="HIY">黄</option>
+                                                <option value="3" class="HIZ">紫</option>
+                                                <option value="4" class="HIO">橙</option>
+                                                <option value="5" class="HIR">红</option>
+                                            </select>
+                                        </td>
+                                        <td class="px-2 py-3">
+                                            <input type="text" id="name3" name="name" class="w-full px-2 py-1 form-input md:w-40">
+                                        </td>
+                                        <td class="px-2 py-3">
+                                            <input type="number" id="IQ3" name="IQ" class="w-full py-1 form-input md:w-20">
+                                        </td>
+                                        <td class="px-2 py-3">
+                                            <input type="number" id="eff3" name="eff" class="w-full py-1 form-input md:w-20">
+                                        </td>
+                                    </tr>
+                                    <tr class="bg-[#222222]">
+                                        <td class="px-2 py-3 text-[15px] font-medium whitespace-nowrap text-white">头部</td>
+                                        <td class="py-3 text-[15px] font-medium whitespace-nowrap">
+                                           <select id="quality4" name="quality" class="w-full py-1 form-input" onchange="applySelectedOptionStyle(this)">
+                                                <option value="1" class="HIC">蓝</option>
+                                                <option value="2" class="HIY">黄</option>
+                                                <option value="3" class="HIZ">紫</option>
+                                                <option value="4" class="HIO">橙</option>
+                                                <option value="5" class="HIR">红</option>
+                                            </select>
+                                        </td>
+                                        <td class="px-2 py-3">
+                                            <input type="text" id="name4" name="name" class="w-full px-2 py-1 form-input md:w-40">
+                                        </td>
+                                        <td class="px-2 py-3">
+                                            <input type="number" id="IQ4" name="IQ" class="w-full py-1 form-input md:w-20">
+                                        </td>
+                                        <td class="px-2 py-3">
+                                            <input type="number" id="eff4" name="eff" class="w-full py-1 form-input md:w-20">
+                                        </td>
+                                    </tr>
+                                    <tr class="bg-[#333333]">
+                                        <td class="px-2 py-3 text-[15px] font-medium whitespace-nowrap">披风</td>
+                                        <td class="py-3 text-[15px] font-medium whitespace-nowrap">
+                                           <select id="quality5" name="quality" class="w-full py-1 form-input" onchange="applySelectedOptionStyle(this)">
+                                                <option value="1" class="HIC">蓝</option>
+                                                <option value="2" class="HIY">黄</option>
+                                                <option value="3" class="HIZ">紫</option>
+                                                <option value="4" class="HIO">橙</option>
+                                                <option value="5" class="HIR">红</option>
+                                            </select>
+                                        </td>
+                                        <td class="px-2 py-3">
+                                            <input type="text" id="name5" name="name" class="w-full px-2 py-1 form-input md:w-40">
+                                        </td>
+                                        <td class="px-2 py-3">
+                                            <input type="number" id="IQ5" name="IQ" class="w-full py-1 form-input md:w-20">
+                                        </td>
+                                        <td class="px-2 py-3">
+                                            <input type="number" id="eff5" name="eff" class="w-full py-1 form-input md:w-20">
+                                        </td>
+                                    </tr>
+                                    <tr class="bg-[#222222]">
+                                        <td class="px-2 py-3 text-[15px] font-medium whitespace-nowrap">戒指</td>
+                                        <td class="py-3 text-[15px] font-medium whitespace-nowrap">
+                                           <select id="quality6" name="quality" class="w-full py-1 form-input" onchange="applySelectedOptionStyle(this)">
+                                                <option value="1" class="HIC">蓝</option>
+                                                <option value="2" class="HIY">黄</option>
+                                                <option value="3" class="HIZ">紫</option>
+                                                <option value="4" class="HIO">橙</option>
+                                                <option value="5" class="HIR">红</option>
+                                            </select>
+                                        </td>
+                                        <td class="px-2 py-3">
+                                            <input type="text" id="name6" name="name" class="w-full px-2 py-1 form-input md:w-40">
+                                        </td>
+                                        <td class="px-2 py-3">
+                                            <input type="number" id="IQ6" name="IQ" class="w-full py-1 form-input md:w-20">
+                                        </td>
+                                        <td class="px-2 py-3">
+                                            <input type="number" id="eff6" name="eff" class="w-full py-1 form-input md:w-20">
+                                        </td>
+                                    </tr>
+                                    <tr class="bg-[#333333]">
+                                        <td class="px-2 py-3 text-[15px] font-medium whitespace-nowrap">项链</td>
+                                        <td class="py-3 text-[15px] font-medium whitespace-nowrap">
+                                           <select id="quality7" name="quality" class="w-full py-1 form-input" onchange="applySelectedOptionStyle(this)">
+                                                <option value="1" class="HIC">蓝</option>
+                                                <option value="2" class="HIY">黄</option>
+                                                <option value="3" class="HIZ">紫</option>
+                                                <option value="4" class="HIO">橙</option>
+                                                <option value="5" class="HIR">红</option>
+                                            </select>
+                                        </td>
+                                        <td class="px-2 py-3">
+                                            <input type="text" id="name7" name="name" class="w-full px-2 py-1 form-input md:w-40">
+                                        </td>
+                                        <td class="px-2 py-3">
+                                            <input type="number" id="IQ7" name="IQ" class="w-full py-1 form-input md:w-20">
+                                        </td>
+                                        <td class="px-2 py-3">
+                                            <input type="number" id="eff7" name="eff" class="w-full py-1 form-input md:w-20">
+                                        </td>
+                                    </tr>
+                                    <tr class="bg-[#222222]">
+                                        <td class="px-2 py-3 text-[15px] font-medium whitespace-nowrap">饰品</td>
+                                        <td class="py-3 text-[15px] font-medium whitespace-nowrap">
+                                           <select id="quality8" name="quality" class="w-full py-1 form-input" onchange="applySelectedOptionStyle(this)">
+                                                <option value="1" class="HIC">蓝</option>
+                                                <option value="2" class="HIY">黄</option>
+                                                <option value="3" class="HIZ">紫</option>
+                                                <option value="4" class="HIO">橙</option>
+                                                <option value="5" class="HIR">红</option>
+                                            </select>
+                                        </td>
+                                        <td class="px-2 py-3">
+                                            <input type="text" id="name8" name="name" class="w-full px-2 py-1 form-input md:w-40">
+                                        </td>
+                                        <td class="px-2 py-3">
+                                            <input type="number" id="IQ8" name="IQ" class="w-full py-1 form-input md:w-20">
+                                        </td>
+                                        <td class="px-2 py-3">
+                                            <input type="number" id="eff8" name="eff" class="w-full py-1 form-input md:w-20">
+                                        </td>
+                                    </tr>
+                                    <tr class="bg-[#333333]">
+                                        <td class="px-2 py-3 text-[15px] font-medium whitespace-nowrap">护腕</td>
+                                        <td class="py-3 text-[15px] font-medium whitespace-nowrap">
+                                           <select id="quality9" name="quality" class="w-full py-1 form-input" onchange="applySelectedOptionStyle(this)">
+                                                <option value="1" class="HIC">蓝</option>
+                                                <option value="2" class="HIY">黄</option>
+                                                <option value="3" class="HIZ">紫</option>
+                                                <option value="4" class="HIO">橙</option>
+                                                <option value="5" class="HIR">红</option>
+                                            </select>
+                                        </td>
+                                        <td class="px-2 py-3">
+                                            <input type="text" id="name9" name="name" class="w-full px-2 py-1 form-input md:w-40">
+                                        </td>
+                                        <td class="px-2 py-3">
+                                            <input type="number" id="IQ9" name="IQ" class="w-full py-1 form-input md:w-20">
+                                        </td>
+                                        <td class="px-2 py-3">
+                                            <input type="number" id="eff9" name="eff" class="w-full py-1 form-input md:w-20">
+                                        </td>
+                                    </tr>
+                                    <tr class="bg-[#222222]">
+                                        <td class="px-2 py-3 text-[15px] font-medium whitespace-nowrap">腰带</td>
+                                        <td class="py-3 text-[15px] font-medium whitespace-nowrap">
+                                           <select id="quality10" name="quality" class="w-full py-1 form-input" onchange="applySelectedOptionStyle(this)">
+                                                <option value="1" class="HIC">蓝</option>
+                                                <option value="2" class="HIY">黄</option>
+                                                <option value="3" class="HIZ">紫</option>
+                                                <option value="4" class="HIO">橙</option>
+                                                <option value="5" class="HIR">红</option>
+                                            </select>
+                                        </td>
+                                        <td class="px-2 py-3">
+                                            <input type="text" id="name10" name="name" class="w-full px-2 py-1 form-input md:w-40">
+                                        </td>
+                                        <td class="px-2 py-3">
+                                            <input type="number" id="IQ10" name="IQ" class="w-full py-1 form-input md:w-20">
+                                        </td>
+                                        <td class="px-2 py-3">
+                                            <input type="number" id="eff10" name="eff" class="w-full py-1 form-input md:w-20">
+                                        </td>
+                                    </tr>
+                                    <tr class="bg-[#333333]">
+                                        <td class="px-2 py-3 text-[15px] font-medium whitespace-nowrap">暗器</td>
+                                        <td class="py-3 text-[15px] font-medium whitespace-nowrap">
+                                           <select id="quality11" name="quality" class="w-full py-1 form-input" onchange="applySelectedOptionStyle(this)">
+                                                <option value="1" class="HIC">蓝</option>
+                                                <option value="2" class="HIY">黄</option>
+                                                <option value="3" class="HIZ">紫</option>
+                                                <option value="4" class="HIO">橙</option>
+                                                <option value="5" class="HIR">红</option>
+                                            </select>
+                                        </td>
+                                        <td class="px-2 py-3">
+                                            <input type="text" id="name11" name="name" class="w-full px-2 py-1 form-input md:w-40">
+                                        </td>
+                                        <td class="px-2 py-3">
+                                            <input type="number" id="IQ11" name="IQ" class="w-full py-1 form-input md:w-20">
+                                        </td>
+                                        <td class="px-2 py-3">
+                                            <input type="number" id="eff11" name="eff" class="w-full py-1 form-input md:w-20">
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                            </div>
+                            
+                            <div class="p-4 bg-[#333333] border border-[#333333] rounded-lg mb-4 w-full md:w-1/4">
+                              <div class="w-auto mt-4">
+                                <button id="calculateBtn" class="px-4 py-2 bg-accent text-white rounded-md hover:bg-accent/90 focus:outline-none focus:ring-2 focus:ring-accent/50 transition-colors">
+                                    计算
+                                </button>
+                                <div id="calculatingAnimation" class="hidden mt-2 text-accent animate-pulse">
+                                    计算中...
+                                    <span class="inline-block animate-spin ml-1">⏳</span>
+                                </div>
+                              </div>
+                              <h4 class="text-[16px] font-medium text-white mb-2">计算结果</h4>
+                              <div id="Result" class="min-h-[550px] space-y-2 text-[15px] text-white">
+                                  <!-- 计算结果将在这里显示 -->
+                                  <p>最优精炼方案将在此显示...</p>
+                              </div>
+                            </div>
+                            <div class="p-4 bg-[#333333] border border-[#333333] rounded-lg mb-4 w-full md:w-1/4">
+                                <h4 class="text-[16px] font-medium text-white mb-2">一键扩展</h4>
+                                <div id="Result_unjl" class="h-[300px] max-h-[300px] overflow-y-auto space-y-2 text-[15px] text-white">
+                                    <p>一键取消精炼扩展：</p>
+                                </div>
+                                
+                                <div id="Result_jl" class="h-[290px] max-h-[290px] overflow-y-auto space-y-2 text-[15px] text-white">
+                                    <p>一键精炼扩展：</p>
+                                </div>
+                                <p class="text-[12px] HIR">（由于网速和命令条数，可能无法使用，建议手动精炼）</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 板块3：副本攻略 -->            
+                <div id="section3" class="content-section">
+                    <h2 class="text-[20px] md:text-[24px] font-medium text-white mb-6">副本攻略</h2>
+                    <!-- 新增tab栏 -->
+                    <div class="flex border-b border-gray-200 mb-4">
+                        <div class="dungeon-tab active px-6 py-3 text-[16px] md:text-[18px] font-medium text-accent cursor-pointer border-b-2 border-accent" data-type="normal">普通副本</div>
+                        <div class="dungeon-tab px-6 py-3 text-[16px] md:text-[18px] font-medium text-secondary cursor-pointer hover:text-primary" data-type="elite">禁地副本</div>
+                    </div>
+                    <!-- 普通副本内容 -->
+                    <div id="normal-dungeon-section" class="dungeon-content">
+                        <div class="mb-4">
+                            <select id="normal-dungeon-select" class="w-32 md:w-40 py-2 form-input">
+                                <option value="">选择副本</option>
+                                <option value="1">树林</option>
+                                <option value="2">财主府</option>
+                                <option value="3">流氓巷</option>
+                                <option value="4">丽春院</option>
+                                <option value="5">兵营</option>
+                                <option value="6">庄府</option>
+                                <option value="7">鳌拜府</option>
+                                <option value="8">天地会</option>
+                                <option value="9">神龙教</option>
+                                <option value="10">关外</option>
+                                <option value="11">温府</option>
+                                <option value="12">五毒教</option>
+                                <option value="13">恒山</option>
+                                <option value="14">青城山</option>
+                                <option value="15">衡山</option>
+                                <option value="16">泰山</option>
+                                <option value="17">嵩山</option>
+                                <option value="18">云梦沼泽</option>
+                                <option value="19">桃花岛</option>
+                                <option value="20">白驼山</option>
+                                <option value="21">星宿海</option>
+                                <option value="22">冰火岛</option>
+                                <option value="23">移花宫</option>
+                                <option value="24">燕子坞</option>
+                                <option value="25">黑木崖</option>
+                                <option value="26">缥缈峰</option>
+                                <option value="27">光明顶</option>
+                                <option value="28">天龙寺</option>
+                                <option value="29">血刀门</option>
+                                <option value="30">古墓派</option>
+                                <option value="31">华山论剑</option>
+                                <option value="32">侠客岛</option>
+                                <option value="33">净念禅宗</option>
+                                <option value="34">慈航静斋</option>
+                                <option value="35">阴阳谷</option>
+                                <option value="36">战神殿</option>
+                            </select>
+                        </div>
+                        <div class="bg-[#222222] rounded-lg p-3 md:p-6" id="dungeon-content">
+                            <h3 class="text-[18px] md:text-[20px] font-medium text-white mb-4" id="dungeon-title">请选择一个副本查看攻略</h3>
+                            <div class="space-y-4 text-[13px] md:text-[16px] text-white" id="dungeon-text">
+                                <p>从上方下拉框选择一个副本，将显示该副本的详细攻略内容。</p>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- 禁地副本内容 -->
+                    <div id="elite-dungeon-section" class="dungeon-content hidden">
+                        <div class="mb-4">
+                            <select id="elite-dungeon-select" class="w-32 md:w-40 py-2 form-input">
+                                <option value="">禁地副本</option>
+                                <option value="1">黑鹰校场</option>
+                                <option value="2">皇城</option>
+                                <option value="3">龙脉</option>
+                                <option value="4">蓬莱岛</option>
+                                <option value="5">梅庄</option>
+                                <option value="6">忘忧谷</option>
+                            </select>
+                        </div>
+                        <div class="bg-[#222222] rounded-lg p-3 md:p-6" id="elite-dungeon-content">
+                            <h3 class="text-[18px] md:text-[20px] font-medium text-white mb-4" id="elite-dungeon-title">请选择一个禁地副本查看攻略</h3>
+                            <div class="space-y-4 text-[13px] md:text-[16px] text-white" id="elite-dungeon-text">
+                                <p>从上方下拉框选择一个禁地副本，将显示该副本的详细攻略内容。</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                
+                <!-- 板块4：技能、装备属性查阅 -->
+                <div id="section4" class="content-section">
+                    <h2 class="text-[20px] md:text-[24px] font-medium text-white mb-6">技能、装备属性查阅</h2>
+                    <div class="flex border-b border-gray-200 mb-6">
+                        <div class="property-tab active px-6 py-3 text-[16px] md:text-[18px] font-medium text-accent cursor-pointer border-b-2 border-accent" data-type="skill">技能</div>
+                        <div class="property-tab px-6 py-3 text-[16px] md:text-[18px] font-medium text-secondary cursor-pointer hover:text-primary" data-type="weapon">装备</div>
+                    </div>
+                    <!-- 技能部分 -->
+                    <div id="skill-section" class="property-content active">
+                        <div class="flex md:gap-6 mb-6">
+                            <div>
+                                <label for="skill-grade" class="block text-[16px] font-medium text-primary mb-2">选择技能等级：</label>
+                                <select id="skill-grade" class="w-20 md:w-28 py-2 form-input" onchange="applySelectedOptionStyle(this)">
+                                    <option value="white">白色</option>
+                                    <option value="green" class="HIG">绿色</option>
+                                    <option value="blue" class="HIC">蓝色</option>
+                                    <option value="yellow" class="HIY">黄色</option>
+                                    <option value="purple" class="HIZ">紫色</option>
+                                    <option value="orange" class="HIO">橙色</option>
+                                    <option value="red" class="HIR">红色</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label for="skill-select" class="block mb-2 text-[16px] font-medium text-primary ml-8">选择技能：</label>
+                                <select id="skill-select" class="w-36 md:w-48 py-2 form-input" onchange="applySelectedOptionStyle(this)">
+                                    <option value="">请选择技能</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="flex-1 bg-[#222222] rounded-lg p-3 md:p-6" id="skill-detail">
+                            <h3 class="text-[18px] md:text-[22px] font-medium text-white mb-4" id="skill-title">请选择一个技能查看详情</h3>
+                            <div class="space-y-4 text-[15px] md:text-[16px] text-white" id="skill-description">
+                                <p>从上方下拉框选择一个技能，将显示该技能的详细信息。</p>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- 装备部分 -->
+                    <div id="weapon-section" class="property-content hidden">
+                        <!-- 添加flex容器使两个下拉列表水平排列 -->
+                        <div class="flex gap-6 mb-6">
+                            <div>
+                                <label for="weapon-grade" class="block text-[16px] font-medium text-primary mb-2">选择装备等级：</label>
+                                <select id="weapon-grade" class="w-20 md:w-28 py-2 form-input" onchange="applySelectedOptionStyle(this)">
+                                    <option value="white">白色</option>
+                                    <option value="green" class="HIG">绿色</option>
+                                    <option value="blue" class="HIC">蓝色</option>
+                                    <option value="yellow" class="HIY">黄色</option>
+                                    <option value="purple" class="HIZ">紫色</option>
+                                    <option value="orange" class="HIO">橙色</option>
+                                    <option value="red" class="HIR">红色</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label for="weapon-select" class="block mb-2 text-[15px] font-medium text-primary ml-8">选择装备：</label>
+                                <select id="weapon-select" class="w-36 md:w-48 py-2 form-input" onchange="applySelectedOptionStyle(this)">
+                                    <option value="">请选择装备</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="flex-1 bg-[#222222] rounded-lg p-3 md:p-6" id="weapon-detail">
+                            <h3 class="text-[18px] md:text-[22px] font-medium text-white mb-4" id="weapon-title">请选择一个装备查看详情</h3>
+                            <div class="space-y-4 text-[15px] md:text-[16px] text-white" id="weapon-description">
+                                <p>从上方下拉框选择一个装备，将显示该装备的详细信息。</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 板块5：门派拜师条件和装备属性 -->
+                <div id="section5" class="content-section">
+                    <h2 class="text-[20px] md:text-[24px] font-medium text-white mb-6">门派拜师条件和装备属性</h2>
+                    <div class="flex border-b border-gray-200 mb-6">
+                        <div class="faction-tab px-6 py-3 text-[16px] md:text-[18px] font-medium text-accent cursor-pointer hover:text-primary active border-b-2 border-accent" data-part="faction-equipments">门派装备属性</div>
+                        <div class="faction-tab px-6 py-3 text-[16px] md:text-[18px] font-medium text-secondary cursor-pointer hover:text-primary" data-part="faction-requirements">门派拜师条件</div>
+                    </div>
+                    <!-- 第一部分：门派装备属性 -->
+                    <div id="faction-equipments" class="faction-content active">
+                        <div class="flex flex-col md:flex-row gap-4 md:gap-6">
+                            <div class="w-full md:w-32 bg-[#222222] rounded-lg p-3 md:p-4 max-h-[60vh] md:h-[600px]">
+                                <h3 class="text-[15px] md:text-[16px] font-medium text-white mb-3">门派列表</h3>
+                                <div class="overflow-y-auto h-[calc(100%-30px)] pr-1 flex flex-row overflow-x-auto md:block md:overflow-y-auto">
+                                    <div class="faction-item py-2 px-2 mb-1 rounded-md cursor-pointer hover:bg-gray-500 text-primary text-sm whitespace-nowrap" data-faction="wudang">武当</div>
+                                    <div class="faction-item py-2 px-2 mb-1 rounded-md cursor-pointer hover:bg-gray-500 text-primary text-sm whitespace-nowrap" data-faction="shaolin">少林</div>
+                                    <div class="faction-item py-2 px-2 mb-1 rounded-md cursor-pointer hover:bg-gray-500 text-primary text-sm whitespace-nowrap" data-faction="huashan">华山</div>
+                                    <div class="faction-item py-2 px-2 mb-1 rounded-md cursor-pointer hover:bg-gray-500 text-primary text-sm whitespace-nowrap" data-faction="emei">峨眉</div>
+                                    <div class="faction-item py-2 px-2 mb-1 rounded-md cursor-pointer hover:bg-gray-500 text-primary text-sm whitespace-nowrap" data-faction="xiaoyao">逍遥</div>
+                                    <div class="faction-item py-2 px-2 mb-1 rounded-md cursor-pointer hover:bg-gray-500 text-primary text-sm whitespace-nowrap" data-faction="gaibang">丐帮</div>
+                                    <div class="faction-item py-2 px-2 mb-1 rounded-md cursor-pointer hover:bg-gray-500 text-primary text-sm whitespace-nowrap" data-faction="xiangyang">襄阳</div>
+                                    <div class="faction-item py-2 px-2 mb-1 rounded-md cursor-pointer hover:bg-gray-500 text-primary text-sm whitespace-nowrap" data-faction="shashou">杀手</div>
+                                </div>
+                            </div>
+                            <div class="flex-1 bg-[#222222] rounded-lg py-3 md:py-6" id="equipment-content">
+                                <h3 class="text-[18px] md:text-[20px] font-medium text-white mb-4" id="equipment-title">请选择一个门派查看推荐装备</h3>
+                                <div class="space-y-4" id="equipment-text">
+                                    <p class="text-[13px] md:text-[16px] text-white">从左侧列表中选择一个门派，将显示该门派的推荐装备及其属性。</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- 第二部分：门派拜师条件 -->
+                    <div id="faction-requirements" class="faction-content hidden">
+                        <div class="flex flex-row md:flex-row gap-4 md:gap-6">
+                            <div class="w-16 md:w-32 bg-[#222222] rounded-lg p-3 md:p-4 max-h-[60vh] md:h-[600px]">
+                                <h3 class="text-[15px] md:text-[16px] font-medium text-white mb-3">门派列表</h3>
+                                <div class="overflow-y-auto h-[calc(100%-30px)] pr-1">
+                                    <div class="faction-item py-2 px-2 mb-1 rounded-md cursor-pointer hover:bg-gray-500 text-primary text-sm whitespace-nowrap" data-faction="wudang">武当</div>
+                                    <div class="faction-item py-2 px-2 mb-1 rounded-md cursor-pointer hover:bg-gray-500 text-primary text-sm whitespace-nowrap" data-faction="shaolin">少林</div>
+                                    <div class="faction-item py-2 px-2 mb-1 rounded-md cursor-pointer hover:bg-gray-500 text-primary text-sm whitespace-nowrap" data-faction="huashan">华山</div>
+                                    <div class="faction-item py-2 px-2 mb-1 rounded-md cursor-pointer hover:bg-gray-500 text-primary text-sm whitespace-nowrap" data-faction="emei">峨眉</div>
+                                    <div class="faction-item py-2 px-2 mb-1 rounded-md cursor-pointer hover:bg-gray-500 text-primary text-sm whitespace-nowrap" data-faction="xiaoyao">逍遥</div>
+                                    <div class="faction-item py-2 px-2 mb-1 rounded-md cursor-pointer hover:bg-gray-500 text-primary text-sm whitespace-nowrap" data-faction="gaibang">丐帮</div>
+                                    <div class="faction-item py-2 px-2 mb-1 rounded-md cursor-pointer hover:bg-gray-500 text-primary text-sm whitespace-nowrap" data-faction="shashou">杀手</div>
+                                </div>
+                            </div>
+                            <div class="flex-1 bg-[#222222] rounded-lg px-1 py-3 md:px-2 md:py-6" id="requirements-content">
+                                <h3 class="text-[18px] md:text-[20px] font-medium text-white mb-4" id="requirements-title">请选择一个门派查看拜师条件</h3>
+                                <div class="space-y-4" id="requirements-text">
+                                    <p class="text-[13px] md:text-[16px] text-secondary">从左侧列表中选择一个门派，将显示该门派的拜师条件。</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 板块6：丹药效果表 -->
+                <div id="section6" class="content-section">
+                    <h2 class="text-[20px] md:text-[24px] font-medium text-white mb-6">丹药效果表</h2>
+                    <div class="bg-[#222222] rounded-lg py-2 md:py-4">
+                        <div class="overflow-x-auto overflow-y-auto pr-2 md:max-w-5xl">
+                            <table class="min-w-full md:w-full equipment-table" style="text-align: center;">
+                                <thead>
+                                    <tr>
+                                        <th class="py-2 bg-[#444444] text-[13px] md:text-[16px] rounded-tl-lg" style="width: 20%;">名称</th>
+                                        <th class="py-2 bg-[#444444] text-[13px] md:text-[16px] HIG">绿色</th>
+                                        <th class="py-2 bg-[#444444] text-[13px] md:text-[16px] HIC">蓝色</th>
+                                        <th class="py-2 bg-[#444444] text-[13px] md:text-[16px] HIY">黄色</th>
+                                        <th class="py-2 bg-[#444444] text-[13px] md:text-[16px] HIZ">紫色</th>
+                                        <th class="py-2 bg-[#444444] text-[13px] md:text-[16px] rounded-tr-lg HIO">橙色</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-[#444444]">
+                                    <tr class="bg-[#333333]">
+                                        <td class="py-3 text-[13px] w-1/6 md:text-[16px] ">金疮药</td>
+                                        <td class="py-3 text-[13px] w-1/6 md:text-[16px] HIG">200气血</td>
+                                        <td class="py-3 text-[13px] w-1/6 md:text-[16px] HIC">200气血</td>
+                                        <td class="py-3 text-[13px] w-1/6 md:text-[16px] HIY">200气血</td>
+                                        <td class="py-3 text-[13px] w-1/6 md:text-[16px] HIZ">200气血</td>
+                                        <td class="py-3 text-[13px] w-1/6 md:text-[16px] HIO">200气血</td>
+                                    </tr>
+                                    <tr class="bg-[#222222]">
+                                        <td class="py-3 text-[13px] w-1/6 md:text-[16px] ">引气丹</td>
+                                        <td class="py-3 text-[13px] w-1/6 md:text-[16px] HIG">200内力</td>
+                                        <td class="py-3 text-[13px] w-1/6 md:text-[16px] HIC">200内力</td>
+                                        <td class="py-3 text-[13px] w-1/6 md:text-[16px] HIY">200内力</td>
+                                        <td class="py-3 text-[13px] w-1/6 md:text-[16px] HIZ">200内力</td>
+                                        <td class="py-3 text-[13px] w-1/6 md:text-[16px] HIO">200内力</td>
+                                    </tr>
+                                    <tr class="bg-[#333333]">
+                                        <td class="py-3 text-[13px] w-1/6 md:text-[16px] ">聚气丹</td>
+                                        <td class="py-3 text-[13px] w-1/6 md:text-[16px] HIG">50最大内力</td>
+                                        <td class="py-3 text-[13px] w-1/6 md:text-[16px] HIC">50最大内力</td>
+                                        <td class="py-3 text-[13px] w-1/6 md:text-[16px] HIY">50最大内力</td>
+                                        <td class="py-3 text-[13px] w-1/6 md:text-[16px] HIZ">50最大内力</td>
+                                        <td class="py-3 text-[13px] w-1/6 md:text-[16px] HIO">50最大内力</td>
+                                    </tr>
+                                    <tr class="bg-[#222222]">
+                                        <td class="py-3 text-[13px] w-1/6 md:text-[16px] ">大还丹</td>
+                                        <td class="py-3 text-[13px] w-1/6 md:text-[16px] HIG">5%气血</td>
+                                        <td class="py-3 text-[13px] w-1/6 md:text-[16px] HIC">15%气血</td>
+                                        <td class="py-3 text-[13px] w-1/6 md:text-[16px] HIY">20%气血</td>
+                                        <td class="py-3 text-[13px] w-1/6 md:text-[16px] HIZ">40%气血</td>
+                                        <td class="py-3 text-[13px] w-1/6 md:text-[16px] HIO">50%气血</td>
+                                    </tr>
+                                    <tr class="bg-[#333333]">
+                                        <td class="py-3 text-[13px] w-1/6 md:text-[16px] ">无常丹</td>
+                                        <td class="py-3 text-[13px] w-1/6 md:text-[16px] HIG">恢复5%内力</td>
+                                        <td class="py-3 text-[13px] w-1/6 md:text-[16px] HIC">恢复15%内力</td>
+                                        <td class="py-3 text-[13px] w-1/6 md:text-[16px] HIY">恢复20%内力</td>
+                                        <td class="py-3 text-[13px] w-1/6 md:text-[16px] HIZ">恢复40%内力</td>
+                                        <td class="py-3 text-[13px] w-1/6 md:text-[16px] HIO">恢复50%内力</td>
+                                    </tr>
+                                    <tr class="bg-[#222222]">
+                                        <td class="py-3 text-[13px] w-1/6 md:text-[16px] ">大力丸</td>
+                                        <td class="py-3 text-[13px] w-1/6 md:text-[16px] HIG">3%攻击</td>
+                                        <td class="py-3 text-[13px] w-1/6 md:text-[16px] HIC">5%攻击</td>
+                                        <td class="py-3 text-[13px] w-1/6 md:text-[16px] HIY">10%攻击</td>
+                                        <td class="py-3 text-[13px] w-1/6 md:text-[16px] HIZ">15%攻击</td>
+                                        <td class="py-3 text-[13px] w-1/6 md:text-[16px] HIO">20%攻击</td>
+                                    </tr>
+                                    <tr class="bg-[#333333]">
+                                        <td class="py-3 text-[13px] w-1/6 md:text-[16px] ">石龟丹</td>
+                                        <td class="py-3 text-[13px] w-1/6 md:text-[16px] HIG">5%防御</td>
+                                        <td class="py-3 text-[13px] w-1/6 md:text-[16px] HIC">5%防御</td>
+                                        <td class="py-3 text-[13px] w-1/6 md:text-[16px] HIY">10%防御</td>
+                                        <td class="py-3 text-[13px] w-1/6 md:text-[16px] HIZ">15%防御</td>
+                                        <td class="py-3 text-[13px] w-1/6 md:text-[16px] HIO">20%防御</td>
+                                    </tr>
+
+                                    <tr class="bg-[#222222]">
+                                        <td class="py-3 text-[13px] w-1/6 md:text-[16px] ">凝神丹</td>
+                                        <td class="py-3 text-[13px] w-1/6 md:text-[16px] HIG">5%命中</td>
+                                        <td class="py-3 text-[13px] w-1/6 md:text-[16px] HIC">5%命中</td>
+                                        <td class="py-3 text-[13px] w-1/6 md:text-[16px] HIY">10%命中</td>
+                                        <td class="py-3 text-[13px] w-1/6 md:text-[16px] HIZ">15%命中</td>
+                                        <td class="py-3 text-[13px] w-1/6 md:text-[16px] HIO">20%命中</td>
+                                    </tr>
+                                    <tr class="bg-[#333333]">
+                                        <td class="py-3 text-[13px] w-1/6 md:text-[16px] ">归心散</td>
+                                        <td class="py-3 text-[13px] w-1/6 md:text-[16px] HIG">5%招架</td>
+                                        <td class="py-3 text-[13px] w-1/6 md:text-[16px] HIC">5%招架</td>
+                                        <td class="py-3 text-[13px] w-1/6 md:text-[16px] HIY">10%招架</td>
+                                        <td class="py-3 text-[13px] w-1/6 md:text-[16px] HIZ">15%招架</td>
+                                        <td class="py-3 text-[13px] w-1/6 md:text-[16px] HIO">20%招架</td>
+                                    </tr>
+
+                                    <tr class="bg-[#222222]">
+                                        <td class="py-3 text-[13px] w-1/6 md:text-[16px] ">风行散</td>
+                                        <td class="py-3 text-[13px] w-1/6 md:text-[16px] HIG">5%躲闪</td>
+                                        <td class="py-3 text-[13px] w-1/6 md:text-[16px] HIC">5%躲闪</td>
+                                        <td class="py-3 text-[13px] w-1/6 md:text-[16px] HIY">10%躲闪</td>
+                                        <td class="py-3 text-[13px] w-1/6 md:text-[16px] HIZ">15%躲闪</td>
+                                        <td class="py-3 text-[13px] w-1/6 md:text-[16px] HIO">20%躲闪</td>
+                                    </tr>
+                                    <tr class="bg-[#333333]">
+                                        <td class="py-3 text-[13px] w-1/6 md:text-[16px] ">蕴象丹</td>
+                                        <td class="py-3 text-[13px] w-1/6 md:text-[16px] HIG">10%打坐效率</td>
+                                        <td class="py-3 text-[13px] w-1/6 md:text-[16px] HIC">20%打坐效率</td>
+                                        <td class="py-3 text-[13px] w-1/6 md:text-[16px] HIY">30%打坐效率</td>
+                                        <td class="py-3 text-[13px] w-1/6 md:text-[16px] HIZ">40%打坐效率</td>
+                                        <td class="py-3 text-[13px] w-1/6 md:text-[16px] HIO">50%打坐效率</td>
+                                    </tr>
+                                    <tr class="bg-[#222222]">
+                                        <td class="py-3 text-[13px] w-1/6 md:text-[16px] ">清心丹</td>
+                                        <td class="py-3 text-[13px] w-1/6 md:text-[16px] HIG">10%学习效率</td>
+                                        <td class="py-3 text-[13px] w-1/6 md:text-[16px] HIC">20%学习效率</td>
+                                        <td class="py-3 text-[13px] w-1/6 md:text-[16px] HIY">30%学习效率</td>
+                                        <td class="py-3 text-[13px] w-1/6 md:text-[16px] HIZ">40%学习效率</td>
+                                        <td class="py-3 text-[13px] w-1/6 md:text-[16px] HIO">50%学习效率</td>
+                                    </tr>
+                                    <tr class="bg-[#333333]">
+                                        <td class="py-3 text-[13px] w-1/6 md:text-[16px] ">冰心丹</td>
+                                        <td class="py-3 text-[13px] w-1/6 md:text-[16px] HIG">10%练习效率</td>
+                                        <td class="py-3 text-[13px] w-1/6 md:text-[16px] HIC">20%练习效率</td>
+                                        <td class="py-3 text-[13px] w-1/6 md:text-[16px] HIY">30%练习效率</td>
+                                        <td class="py-3 text-[13px] w-1/6 md:text-[16px] HIZ">40%练习效率</td>
+                                        <td class="py-3 text-[13px] w-1/6 md:text-[16px] HIO">50%练习效率</td>
+                                    </tr>
+                                    <tr class="bg-[#222222]">
+                                        <td class="py-3 text-[13px] w-1/6 md:text-[16px] ">玄冰丹</td>
+                                        <td class="py-3 text-[13px] w-1/6 md:text-[16px] HIG">5%绝招释放速度</td>
+                                        <td class="py-3 text-[13px] w-1/6 md:text-[16px] HIC">5%绝招释放速度</td>
+                                        <td class="py-3 text-[13px] w-1/6 md:text-[16px] HIY">10%绝招释放速度</td>
+                                        <td class="py-3 text-[13px] w-1/6 md:text-[16px] HIZ">15%绝招释放速度</td>
+                                        <td class="py-3 text-[13px] w-1/6 md:text-[16px] HIO">20%绝招释放速度</td>
+                                    </tr>
+                                    <tr class="bg-[#333333]">
+                                        <td class="py-3 text-[13px] w-1/6 md:text-[16px] ">玄灵丹</td>
+                                        <td class="py-3 text-[13px] w-1/6 md:text-[16px] HIG">5%绝招冷却</td>
+                                        <td class="py-3 text-[13px] w-1/6 md:text-[16px] HIC">5%绝招冷却</td>
+                                        <td class="py-3 text-[13px] w-1/6 md:text-[16px] HIY">10%绝招冷却</td>
+                                        <td class="py-3 text-[13px] w-1/6 md:text-[16px] HIZ">20%绝招冷却</td>
+                                        <td class="py-3 text-[13px] w-1/6 md:text-[16px] HIO">30%绝招冷却</td>
+                                    </tr>
+                                    <tr class="bg-[#222222]">
+                                        <td class="py-3 text-[13px] w-1/6 md:text-[16px] ">生机丸</td>
+                                        <td class="py-3 text-[13px] w-1/6 md:text-[16px] HIG">5%内力消耗降低</td>
+                                        <td class="py-3 text-[13px] w-1/6 md:text-[16px] HIC">5%内力消耗降低</td>
+                                        <td class="py-3 text-[13px] w-1/6 md:text-[16px] HIY">10%内力消耗降低</td>
+                                        <td class="py-3 text-[13px] w-1/6 md:text-[16px] HIZ">20%内力消耗降低</td>
+                                        <td class="py-3 text-[13px] w-1/6 md:text-[16px] HIO">35%内力消耗降低</td>
+                                    </tr>
+                                    <tr class="bg-[#333333]">
+                                        <td class="py-3 text-[13px] w-1/6 md:text-[16px] ">风雷丹</td>
+                                        <td class="py-3 text-[13px] w-1/6 md:text-[16px] HIG">5%暴击</td>
+                                        <td class="py-3 text-[13px] w-1/6 md:text-[16px] HIC">5%暴击</td>
+                                        <td class="py-3 text-[13px] w-1/6 md:text-[16px] HIY">10%暴击</td>
+                                        <td class="py-3 text-[13px] w-1/6 md:text-[16px] HIZ">10%暴击</td>
+                                        <td class="py-3 text-[13px] w-1/6 md:text-[16px] HIO">20%暴击</td>
+                                    </tr>
+                                    <tr class="bg-[#222222]">
+                                        <td class="py-3 text-[13px] w-1/6 md:text-[16px] ">风神丹</td>
+                                        <td class="py-3 text-[13px] w-1/6 md:text-[16px] HIG">10%攻速</td>
+                                        <td class="py-3 text-[13px] w-1/6 md:text-[16px] HIC">20%攻速</td>
+                                        <td class="py-3 text-[13px] w-1/6 md:text-[16px] HIY">30%攻速</td>
+                                        <td class="py-3 text-[13px] w-1/6 md:text-[16px] HIZ">25%攻速</td>
+                                        <td class="py-3 text-[13px] w-1/6 md:text-[16px] HIO">30%攻速</td>
+                                    </tr>
+                                    <tr class="bg-[#333333]">
+                                        <td class="py-3 text-[13px] w-1/6 md:text-[16px] ">赤火丹</td>
+                                        <td class="py-3 text-[13px] w-1/6 md:text-[16px] HIG">5%爆伤</td>
+                                        <td class="py-3 text-[13px] w-1/6 md:text-[16px] HIC">10%爆伤</td>
+                                        <td class="py-3 text-[13px] w-1/6 md:text-[16px] HIY">20%爆伤</td>
+                                        <td class="py-3 text-[13px] w-1/6 md:text-[16px] HIZ">20%爆伤</td>
+                                        <td class="py-3 text-[13px] w-1/6 md:text-[16px] HIO">30%爆伤</td>
+                                    </tr>
+                                    <tr class="bg-[#222222]">
+                                        <td class="py-3 text-[13px] w-1/6 md:text-[16px] ">赤血丹</td>
+                                        <td class="py-3 text-[13px] w-1/6 md:text-[16px] HIG">5%终伤</td>
+                                        <td class="py-3 text-[13px] w-1/6 md:text-[16px] HIC">5%终伤</td>
+                                        <td class="py-3 text-[13px] w-1/6 md:text-[16px] HIY">10%终伤</td>
+                                        <td class="py-3 text-[13px] w-1/6 md:text-[16px] HIZ">20%终伤</td>
+                                        <td class="py-3 text-[13px] w-1/6 md:text-[16px] HIO">30%终伤</td>
+                                    </tr>
+                                    <tr class="bg-[#333333]">
+                                        <td class="py-3 text-[13px] w-1/6 md:text-[16px] ">破军丹</td>
+                                        <td class="py-3 text-[13px] w-1/6 md:text-[16px] HIG">5%无视防御</td>
+                                        <td class="py-3 text-[13px] w-1/6 md:text-[16px] HIC">5%无视防御</td>
+                                        <td class="py-3 text-[13px] w-1/6 md:text-[16px] HIY">10%无视防御</td>
+                                        <td class="py-3 text-[13px] w-1/6 md:text-[16px] HIZ">20%无视防御</td>
+                                        <td class="py-3 text-[13px] w-1/6 md:text-[16px] HIO">30%无视防御</td>
+                                    </tr>
+                                    <tr class="bg-[#222222]">
+                                        <td class="py-3 text-[13px] w-1/6 md:text-[16px] ">玄武丹</td>
+                                        <td class="py-3 text-[13px] w-1/6 md:text-[16px] HIG">5%减伤</td>
+                                        <td class="py-3 text-[13px] w-1/6 md:text-[16px] HIC">5%减伤</td>
+                                        <td class="py-3 text-[13px] w-1/6 md:text-[16px] HIY">10%减伤</td>
+                                        <td class="py-3 text-[13px] w-1/6 md:text-[16px] HIZ">10%减伤</td>
+                                        <td class="py-3 text-[13px] w-1/6 md:text-[16px] HIO">20%减伤</td>
+                                    </tr>
+                                    <tr class="bg-[#333333]">
+                                        <td class="py-3 text-[13px] w-1/6 md:text-[16px] ">归元散</td>
+                                        <td class="py-3 text-[13px] w-1/6 md:text-[16px] HIG">5%忙乱</td>
+                                        <td class="py-3 text-[13px] w-1/6 md:text-[16px] HIC">10%忙乱</td>
+                                        <td class="py-3 text-[13px] w-1/6 md:text-[16px] HIY">15%忙乱</td>
+                                        <td class="py-3 text-[13px] w-1/6 md:text-[16px] HIZ">20%忙乱</td>
+                                        <td class="py-3 text-[13px] w-1/6 md:text-[16px] HIO">30%忙乱</td>
+                                    </tr>
+                                    <tr class="bg-[#222222]">
+                                        <td class="py-3 text-[13px] w-1/6 md:text-[16px] ">风行丹</td>
+                                        <td class="py-3 text-[13px] w-1/6 md:text-[16px] HIG">5%忽视忙乱</td>
+                                        <td class="py-3 text-[13px] w-1/6 md:text-[16px] HIC">10%忽视忙乱</td>
+                                        <td class="py-3 text-[13px] w-1/6 md:text-[16px] HIY">20%忽视忙乱</td>
+                                        <td class="py-3 text-[13px] w-1/6 md:text-[16px] HIZ">20%忽视忙乱</td>
+                                        <td class="py-3 text-[13px] w-1/6 md:text-[16px] HIO">30%忽视忙乱</td>
+                                    </tr>
+                                    <tr class="bg-[#333333]">
+                                        <td class="py-3 text-[13px] w-1/6 md:text-[16px] ">造化丹</td>
+                                        <td class="py-3 text-[13px] w-1/6 md:text-[16px] HIG">5%负面效果抵抗</td>
+                                        <td class="py-3 text-[13px] w-1/6 md:text-[16px] HIC">10%负面效果抵抗</td>
+                                        <td class="py-3 text-[13px] w-1/6 md:text-[16px] HIY">20%负面效果抵抗</td>
+                                        <td class="py-3 text-[13px] w-1/6 md:text-[16px] HIZ">20%负面效果抵抗</td>
+                                        <td class="py-3 text-[13px] w-1/6 md:text-[16px] HIO">30%负面抵抗</td>
+                                    </tr>
+                                    <tr class="bg-[#222222]">
+                                        <td class="py-3 text-[13px] w-1/6 md:text-[16px] ">突破丹</td>
+                                        <td class="py-3 text-[13px] w-1/6 md:text-[16px] "></td>
+                                        <td class="py-3 text-[13px] w-1/6 md:text-[16px] "></td>
+                                        <td class="py-3 text-[13px] w-1/6 md:text-[16px] "></td>
+                                        <td class="py-3 text-[13px] w-1/6 md:text-[16px] "></td>
+                                        <td class="py-3 text-[13px] w-1/6 md:text-[16px] "></td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 板块7：随从技能属性 -->
+                <div id="section7" class="content-section">
+                    <h2 class="text-[20px] md:text-[24px] font-medium text-white mb-6">随从技能属性资料</h2>
+                    <div class="flex flex-row gap-4 overflow-x-auto">
+                        <div class="w-[120px] bg-[#222222] rounded-lg p-3">
+                            <h3 class="text-[15px] md:text-[16px] font-medium text-white mb-3">随从列表</h3>
+                            <div class="overflow-y-auto pr-1 max-h-[65vh] md:max-h-none md:h-auto md:overflow-y-visible">
+                                <div class="fellow-item p-3 rounded-md cursor-pointer hover:bg-gray-500 text-primary" data-fellow="阿紫">阿紫</div>
+                                <div class="fellow-item p-3 rounded-md cursor-pointer hover:bg-gray-500 text-primary" data-fellow="程灵素">程灵素</div>
+                                <div class="fellow-item p-3 rounded-md cursor-pointer hover:bg-gray-500 text-primary" data-fellow="黄蓉">黄蓉</div>
+                                <div class="fellow-item p-3 rounded-md cursor-pointer hover:bg-gray-500 text-primary" data-fellow="双儿">双儿</div>
+                                <div class="fellow-item p-3 rounded-md cursor-pointer hover:bg-gray-500 text-primary" data-fellow="王语嫣">王语嫣</div>
+                                <div class="fellow-item p-3 rounded-md cursor-pointer hover:bg-gray-500 text-primary" data-fellow="温仪">温仪</div>
+                                <div class="fellow-item p-3 rounded-md cursor-pointer hover:bg-gray-500 text-primary" data-fellow="周芷若">周芷若</div>
+                                <div class="fellow-item p-3 rounded-md cursor-pointer hover:bg-gray-500 text-primary" data-fellow="小昭">小昭</div>
+                                <div class="fellow-item p-3 rounded-md cursor-pointer hover:bg-gray-500 text-primary" data-fellow="夏雪宜">夏雪宜</div>
+                                <div class="fellow-item p-3 rounded-md cursor-pointer hover:bg-gray-500 text-primary" data-fellow="张无忌">张无忌</div>
+                                <div class="fellow-item p-3 rounded-md cursor-pointer hover:bg-gray-500 text-primary" data-fellow="青青">青青</div>
+                            </div>
+                        </div>
+                        <div class="w-[200px] bg-[#222222] rounded-lg p-3 max-w-sm">
+                            <h3 class="text-[18px] md:text-[20px] font-medium text-white mb-4" id="fellow-title">请选择一个随从查看属性</h3>
+                            <div class="space-y-4" id="fellow-content">
+                                <p class="text-[13px] md:text-[16px] text-secondary">从左侧列表中选择一个随从，将显示该随从的详细属性信息。</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 备注 -->
+                    <div class="mt-6">
+                        <p class="text-[14px] text-secondary">覆盖原则：继承被覆盖随从的经验、潜能、装备。技能等级会取前后2个随从所有的技能较高等级。先天属性为新随从属性</p>
+                    </div>
+                </div>
+                
+                <!-- 板块8：扩展内容 -->
+                <div id="section8" class="content-section">
+                    <h2 class="text-[20px] md:text-[24px] font-medium text-white mb-6">扩展使用攻略</h2>
+                    <div class="bg-[#222222] rounded-lg p-6">
+                        <div class="space-y-4" id="section7-content">
+                            <div class="text-[13px] md:text-[16px] text-primary space-y-4">
+                                <p>点击设置-扩展，选择一个扩展，点击“添加新的扩展”。</p>
+                                 
+                                <p>有三个地方可以修改：</p>
+                                <ul class="list-disc pl-6 space-y-1">
+                                    <li><strong>提示/描述/说明：</strong>扩展显示的名称，可以被解析为html格式</li>
+                                    <li><strong>可用选项：</strong>决定了你的扩展出现在哪，可以是：背包、人物下方、动作栏、技能栏等等</li>
+                                    <li><strong>可用参数：</strong>用于筛选扩展按钮出现在哪。支持多个参数，但是逻辑为共同满足。如输入can_eq(1);name(剑)，扩展只会出现在可装备的名字包含剑的物体下</li>
+                                    <li><strong>命令框：</strong>输入命令后，点击你的扩展就会执行该命令</li>
+                                </ul>
+                                <p>右侧“开始记录”选项可以帮助你自己编写扩展。使用：点击后执行你想要的操作，操作完后点击停止，然后进入设置里的扩展，此时命令框中会保存被记录的命令</p>
+                                
+                                <div class="mt-4">
+                                    <h4 class="text-lg font-medium text-white mb-2">常用扩展</h4>
+                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                      <div class="bg-[#333333] p-3 rounded-md shadow-sm">
+                                            <div class="font-medium mb-1 text-white">查看ID</div>
+                                            <div class="text-gray-300">可用选项：-</div>
+                                            <div class="text-sm bg-[#222222] p-2 rounded mt-1 text-white">#msg 该物体ID为&lt;HIO&gt; @id &lt;/HIO&gt</div>
+                                        </div>
+
+                                        <div class="bg-[#333333] p-3 rounded-md shadow-sm">
+                                            <div class="font-medium mb-1 text-white">信息统计</div>
+                                            <div class="text-gray-300">可用选项：-</div>
+                                            <div class="text-sm bg-[#222222] p-2 rounded mt-1 text-white">info</div>
+                                        </div>
+                                        <div class="bg-[#333333] p-3 rounded-md shadow-sm">
+                                            <div class="font-medium mb-1 text-white">练习到指定等级</div>
+                                            <div class="text-gray-300">可用选项："技能"</div>
+                                            <div class="text-sm bg-[#222222] p-2 rounded mt-1 text-white">lianxi @id @input</div>
+                                        </div>
+                                         
+                                        <div class="bg-[#333333] p-3 rounded-md shadow-sm">
+                                            <div class="font-medium mb-1 text-white">放弃到指定等级</div>
+                                            <div class="text-gray-300">可用选项："技能"</div>
+                                            <div class="text-sm bg-[#222222] p-2 rounded mt-1 text-white">fangqi @id @input</div>
+                                        </div>
+                                         
+                                        <div class="bg-[#333333] p-3 rounded-md shadow-sm">
+                                            <div class="font-medium mb-1 text-white">学习到指定等级</div>
+                                            <div class="text-gray-300">可用选项："师父技能"</div>
+                                            <div class="text-sm bg-[#222222] p-2 rounded mt-1 text-white">xue @input @id from @master</div>
+                                        </div>
+
+                                        <div class="bg-[#333333] p-3 rounded-md shadow-sm">
+                                            <div class="font-medium mb-1 text-white">查找技能说明</div>
+                                            <div class="text-gray-300">可用选项："动作栏"</div>
+                                            <div class="text-sm bg-[#222222] p-2 rounded mt-1 text-white">checkskill qixianwuxingjian(你想要找的技能的拼音) help<br>checkskill qixianwuxingjian 2999(技能等级，不超过2999)</div>
+                                        </div>
+
+                                        <div class="bg-[#333333] p-3 rounded-md shadow-sm">
+                                            <div class="font-medium mb-1 text-white">杀蒙古兵</div>
+                                            <div class="text-gray-300">可用选项："动作栏"</div>
+                                            <div class="text-sm bg-[#222222] p-2 rounded mt-1 text-white">kill @npc(兵 可以替换为："十夫长"等)</div>
+                                        </div>
+
+                                        <div class="bg-[#333333] p-3 rounded-md shadow-sm">
+                                            <div class="font-medium mb-1 text-white">帮派战</div>
+                                            <div class="text-gray-300">可用选项："动作栏"</div>
+                                            <div class="text-sm bg-[#222222] p-2 rounded mt-1 text-white">goto fam4</div>
+                                        </div>
+
+                                        <div class="bg-[#333333] p-3 rounded-md shadow-sm">
+                                            <div class="font-medium mb-1 text-white">精炼三星</div>
+                                            <div class="text-gray-300">可用选项："背包道具"，可选参数: can_eq(1)</div>
+                                            <div class="text-sm bg-[#222222] p-2 rounded mt-1 text-white">jinglian @id ok;jinglian @id ok;jinglian @id ok;jinglian @id ok;jinglian @id ok;jinglian @id ok;</div>
+                                        </div>
+
+                                        <div class="bg-[#333333] p-3 rounded-md shadow-sm">
+                                            <div class="font-medium mb-1 text-white">取消精炼</div>
+                                            <div class="text-gray-300">可用选项："背包道具"，可选参数: can_eq(1)</div>
+                                            <div class="text-sm bg-[#222222] p-2 rounded mt-1 text-white">unjinglian @id</div>
+                                        </div>
+                                         
+                                        <div class="bg-[#333333] p-3 rounded-md shadow-sm col-span-1 md:col-span-2">
+                                            <div class="font-medium mb-1 text-white">卖鱼</div>
+                                            <div class="text-gray-300">可用选项："房间物体"，可选参数: f(1)</div>
+                                            <div class="text-sm bg-[#222222] p-2 rounded mt-1 overflow-x-auto text-white">dc @id stopstate;pack @id;#wait 200;dc @id sell @pack(鲤鱼);dc @id sell @pack(草鱼);dc @id sell @pack(鲢鱼);dc @id sell @pack(鲮鱼);dc @id sell @pack(鲂鱼);dc @id sell @pack(鳊鱼);dc @id sell @pack(黄颡鱼);dc @id sell @pack(黄金鳉);dc @id sell @pack(太湖银鱼);dc @id sell @pack(孔雀鱼);dc @id sell @pack(反天刀);dc @id sell @pack(虹鳟);dc @id diao;</div>
+                                        </div>
+                                         
+                                        <div class="bg-[#333333] p-3 rounded-md shadow-sm col-span-1 md:col-span-2">
+                                            <div class="font-medium mb-1 text-white">卖药</div>
+                                            <div class="text-gray-300">可用选项："房间物体"，可选参数: f(1)</div>
+                                            <div class="text-sm bg-[#222222] p-2 rounded mt-1 overflow-x-auto text-white">dc @id stopstate;pack @id;#wait 200;dc @id sell @pack(山楂叶);dc @id sell @pack(当归);dc @id sell @pack(芦荟);dc @id sell @pack(石楠叶);dc @id sell @pack(柴胡);dc @id sell @pack(金银花);dc @id sell @pack(茯苓);dc @id sell @pack(沉香);dc @id sell @pack(熟地黄);dc @id sell @pack(络石藤);dc @id sell @pack(冬虫夏草);dc @id sell @pack(九香虫);dc @id cai;</div>
+                                        </div>
+                                        <div class="bg-[#333333] p-3 rounded-md shadow-sm">
+                                            <div class="font-medium mb-1 text-white">卖矿</div>
+                                            <div class="text-gray-300">可用选项："房间物体"，可选参数: f(1)</div>
+                                            <div class="text-sm bg-[#222222] p-2 rounded mt-1 text-white">dc @id stopstate;pack @id;#wait 200;dc @id sell @pack(宝石);dc @id wk;</div>
+                                        </div>
+                                        <div class="bg-[#333333] p-3 rounded-md shadow-sm">
+                                            <div class="font-medium mb-1 text-white">找姜卫</div>
+                                            <div class="text-gray-300">可用选项："地图"，可选参数: name(蓬莱)</div>
+                                            <div class="text-sm bg-[#222222] p-2 rounded mt-1 text-white">jh ar 3 start;go east;go north;go northeast;go northeast;go north;go northwest;#wait 1000;go north;go north;go north;go north;go north;go west;go south;</div>
+                                        </div>
+                                        
+                                         <div class="bg-[#333333] p-3 rounded-md shadow-sm">
+                                            <div class="font-medium mb-1 text-white">取消镶嵌</div>
+                                            <div class="text-gray-300">可用选项："背包道具"，可选参数: can_eq(1)</div>
+                                            <div class="text-sm bg-[#222222] p-2 rounded mt-1 text-white">unxiangqian @id</div>
+                                        </div>
+
+                                        <div class="bg-[#333333] p-3 rounded-md shadow-sm">
+                                            <div class="font-medium mb-1 text-white">随从学习基础</div>
+                                            <div class="text-gray-300">可用选项："房间物体"，可选参数: f(1)</div>
+                                            <div class="text-sm bg-[#222222] p-2 rounded mt-1 text-white">dc @id xue throwing from 自己id</div>
+                                        </div>
+
+                                        <!-- <div class="bg-[#333333] p-3 rounded-md shadow-sm">
+                                            <div class="font-medium mb-1 HIR">自宫(谨慎使用)</div>
+                                            <div class="text-gray-300">可用选项："动作栏"</div>
+                                            <div class="text-sm bg-[#222222] p-2 rounded mt-1 text-white">zigong ok;</div>
+                                        </div> -->
+                                    </div>
+                                    <div class="params-container" style="color: #f0f0f0; line-height: 1.6; padding: 1rem; ">
+                                      <h2 class="HIC" style="font-size: 24px; margin: 1.5rem 0 1rem; border-bottom: 1px solid #444; padding-bottom: 0.5rem;">扩展进阶</h2>
+                                      <p style="font-size: 18px; margin: 0 0 1.5rem; color: #ddd;">善用命令与参数，可以得到更好的扩展使用体验</p>
+
+                                      <span style="margin-bottom: 2rem;">
+                                          <h3 style="font-size: 20px; margin: 1rem 0; color: #eee;">1. 动作</h3>
+                                          <p style="margin: 0 0 1rem; color: #ccc;">游戏页面操作，不会发送命令</p>
+                                          <ol class="list-decimal pl-6 space-y-1" style="margin: 0 0 1rem; padding-left: 2rem;">
+                                              <li style="margin: 0.5rem 0;"><code style="padding: 0.2rem 0.4rem; border-radius: 3px; color: #a8d1ff;">#wait 100</code>：等待100毫秒执行</li>
+                                              <li style="margin: 0.5rem 0;"><code style="padding: 0.2rem 0.4rem; border-radius: 3px; color: #a8d1ff;">#msg 你好</code>：输出提示消息，可以输出带颜色提示如<code style="padding: 0.2rem 0.4rem; border-radius: 3px; color: #a8d1ff;">#msg &lt;hio&gt;提示&lt;/hio&gt;</code></li>
+                                              <li style="margin: 0.5rem 0;"><code style="padding: 0.2rem 0.4rem; border-radius: 3px; color: #a8d1ff;">#menu score</code>：打开对话框‘score’</li>
+                                              <li style="margin: 0.5rem 0;"><code style="padding: 0.2rem 0.4rem; border-radius: 3px; color: #a8d1ff;">#action (0-9)</code>：执行动作栏对应位置的操作</li>
+                                              <li style="margin: 0.5rem 0;"><code style="padding: 0.2rem 0.4rem; border-radius: 3px; color: #a8d1ff;">#pfm (0-9)</code>：释放对应位置的绝招</li>
+                                          </ol>
+                                      </span>
+
+                                      <span style="margin-bottom: 2rem;">
+                                          <h3 style="font-size: 20px; margin: 1rem 0; color: #eee;">2. 命令参数</h3>
+                                          <p style="margin: 0 0 1rem; color: #ccc;">获取内部元素ID，通常括号内参数可省略，如<code style="padding: 0.2rem 0.4rem; border-radius: 3px; color: #a8d1ff;">@npc(唐楠)</code>-<code style="padding: 0.2rem 0.4rem; border-radius: 3px; color: #a8d1ff;">@npc(唐)</code></p>
+                                          <ol class="list-decimal pl-6 space-y-1" style="margin: 0 0 1rem; padding-left: 2rem;">
+                                              <li style="margin: 0.5rem 0;"><code style="padding: 0.2rem 0.4rem; border-radius: 3px; color: #a8d1ff;">@npc</code>返回当前房间所有npc的id，<code style="padding: 0.2rem 0.4rem; border-radius: 3px; color: #a8d1ff;">@npc(名字)</code>可指定npc</li>
+                                              <li style="margin: 0.5rem 0;"><code style="padding: 0.2rem 0.4rem; border-radius: 3px; color: #a8d1ff;">@item</code>：返回当前房间所有人物id，<code style="padding: 0.2rem 0.4rem; border-radius: 3px; color: #a8d1ff;">@item(名字)</code>可指定人物</li>
+                                              <li style="margin: 0.5rem 0;"><code style="padding: 0.2rem 0.4rem; border-radius: 3px; color: #a8d1ff;">@id</code>：返回选中项id</li>
+                                              <li style="margin: 0.5rem 0;"><code style="padding: 0.2rem 0.4rem; border-radius: 3px; color: #a8d1ff;">dc</code> 控制随从</li>
+                                              <li style="margin: 0.5rem 0;"><code style="padding: 0.2rem 0.4rem; border-radius: 3px; color: #a8d1ff;">@me</code>：返回角色自己的id</li>
+                                              <li style="margin: 0.5rem 0;"><code style="padding: 0.2rem 0.4rem; border-radius: 3px; color: #a8d1ff;">@pack(物品名)</code>：返回背包物品的id</li>
+                                              <li style="margin: 0.5rem 0;"><code style="padding: 0.2rem 0.4rem; border-radius: 3px; color: #a8d1ff;">@obj(属性)</code>：返回上一个选中的对象的属性值，对象可为：背包道具、npc、玩家。示例：<code style="padding: 0.2rem 0.4rem; border-radius: 3px; color: #a8d1ff;">#msg @obj(name) 的蓝量是&lt;hic&gt; @obj(max_hp)</code>具体属性值参考下一部分：扩展参数。</li>
+                                              <li style="margin: 0.5rem 0;"><code style="padding: 0.2rem 0.4rem; border-radius: 3px; color: #a8d1ff;">@master(人物名)</code>：返回师父的id</li>
+                                              <li style="margin: 0.5rem 0;"><code style="padding: 0.2rem 0.4rem; border-radius: 3px; color: #a8d1ff;">@goods(商品名)</code>：获取商人售卖物品ID，需要打开购买列表</li>
+                                              <li style="margin: 0.5rem 0;"><code style="padding: 0.2rem 0.4rem; border-radius: 3px; color: #a8d1ff;">@dir(方向)</code>：返回当前房间指定方向出口</li>
+                                            </ol>
+                                      </span>
+
+                                      <span style="margin-bottom: 2rem;">
+                                          <h3 style="font-size: 20px; margin: 1rem 0; color: #eee;">3. 扩展参数</h3>
+                                          <p style="margin: 0 0 1rem; color: #ccc;">设置扩展参数后，扩展只会在满足参数的地方出现。格式为"参数(内容)"，如<code style="padding: 0.2rem 0.4rem; border-radius: 3px; color: #a8d1ff;">type(item)</code>通常括号内参数可省略。以下仅展示部分参数</p>
+                                          
+                                          <div style="margin-left: 1rem;">
+                                              <h4 style="font-size: 18px; margin: 1rem 0 0.5rem; color: #e0e0e0;">1). 动作栏</h4>
+                                              <ol class="list-decimal pl-6 space-y-1" style="margin: 0 0 1rem; padding-left: 2rem;">
+                                                  <li style="margin: 0.5rem 0;"><code style="padding: 0.2rem 0.4rem; border-radius: 3px; color: #a8d1ff;">name</code>房间左上角的名字，格式为<code style="padding: 0.2rem 0.4rem; border-radius: 3px; color: #a8d1ff;">住房-练功房</code></li>
+                                                  <li style="margin: 0.5rem 0;"><code style="padding: 0.2rem 0.4rem; border-radius: 3px; color: #a8d1ff;">desc</code>房间上方描述</li>
+                                              </ol>
+
+                                              <h4 style="font-size: 18px; margin: 1rem 0 0.5rem; color: #e0e0e0;">2). 房间物体</h4>
+                                              <ol class="list-decimal pl-6 space-y-1" style="margin: 0 0 1rem; padding-left: 2rem;">
+                                                  <li style="margin: 0.5rem 0;"><code style="padding: 0.2rem 0.4rem; border-radius: 3px; color: #a8d1ff;">desc</code>描述</li>
+                                                  <li style="margin: 0.5rem 0;"><code style="padding: 0.2rem 0.4rem; border-radius: 3px; color: #a8d1ff;">id</code></li>
+                                                  <li style="margin: 0.5rem 0;"><code style="padding: 0.2rem 0.4rem; border-radius: 3px; color: #a8d1ff;">name</code>名字，会包括动作如<code style="padding: 0.2rem 0.4rem; border-radius: 3px; color: #a8d1ff;">小昭采药中</code></li>
+                                                  <li style="margin: 0.5rem 0;"><code style="padding: 0.2rem 0.4rem; border-radius: 3px; color: #a8d1ff;">m</code>是否可学习。数字0或1</li>
+                                                  <li style="margin: 0.5rem 0;"><code style="padding: 0.2rem 0.4rem; border-radius: 3px; color: #a8d1ff;">l</code>是否可购买。数字0或1，老金：0，唐：1</li>
+                                                  <li style="margin: 0.5rem 0;"><code style="padding: 0.2rem 0.4rem; border-radius: 3px; color: #a8d1ff;">f</code>是否是随从。数字0或1</li>
+                                                  <li style="margin: 0.5rem 0;"><code style="padding: 0.2rem 0.4rem; border-radius: 3px; color: #a8d1ff;">p</code>是否为玩家。数字0或1</li>
+                                                  <li style="margin: 0.5rem 0;"><code style="padding: 0.2rem 0.4rem; border-radius: 3px; color: #a8d1ff;">me</code>是否是自己。数字0或1</li>
+                                                  <li style="margin: 0.5rem 0;"><code style="padding: 0.2rem 0.4rem; border-radius: 3px; color: #a8d1ff;">hp</code>当前血量</li>
+                                                  <li style="margin: 0.5rem 0;"><code style="padding: 0.2rem 0.4rem; border-radius: 3px; color: #a8d1ff;">mp</code>当前蓝量</li>
+                                                  <li style="margin: 0.5rem 0;"><code style="padding: 0.2rem 0.4rem; border-radius: 3px; color: #a8d1ff;">max_hp</code>最大血量</li>
+                                                  <li style="margin: 0.5rem 0;"><code style="padding: 0.2rem 0.4rem; border-radius: 3px; color: #a8d1ff;">max_mp</code>最大蓝量</li>
+                                                  <li style="margin: 0.5rem 0;"><code style="padding: 0.2rem 0.4rem; border-radius: 3px; color: #a8d1ff;">trader</code>是否可交易、拜师。</li>
+                                                  <li style="margin: 0.5rem 0;"><code style="padding: 0.2rem 0.4rem; border-radius: 3px; color: #a8d1ff;">status</code>对象身上的buff。json对象，</li>
+                                              </ol>
+
+                                              <h4 style="font-size: 18px; margin: 1rem 0 0.5rem; color: #e0e0e0;">3). 背包物品</h4>
+                                              <ol class="list-decimal pl-6 space-y-1" style="margin: 0 0 1rem; padding-left: 2rem;">
+                                                  <li style="margin: 0.5rem 0;"><code style="padding: 0.2rem 0.4rem; border-radius: 3px; color: #a8d1ff;">name</code>名字</li>
+                                                  <li style="margin: 0.5rem 0;"><code style="padding: 0.2rem 0.4rem; border-radius: 3px; color: #a8d1ff;">id</code></li>
+                                                  <li style="margin: 0.5rem 0;"><code style="padding: 0.2rem 0.4rem; border-radius: 3px; color: #a8d1ff;">count</code>数量</li>
+                                                  <li style="margin: 0.5rem 0;"><code style="padding: 0.2rem 0.4rem; border-radius: 3px; color: #a8d1ff;">grade</code>等级，0-6</li>
+                                                  <li style="margin: 0.5rem 0;"><code style="padding: 0.2rem 0.4rem; border-radius: 3px; color: #a8d1ff;">unit</code>单位，如块</li>
+                                                  <li style="margin: 0.5rem 0;"><code style="padding: 0.2rem 0.4rem; border-radius: 3px; color: #a8d1ff;">value</code>价格，如1金23银45铜：<code style="padding: 0.2rem 0.4rem; border-radius: 3px; color: #a8d1ff;">12345</code></li>
+                                                  <li style="margin: 0.5rem 0;"><code style="padding: 0.2rem 0.4rem; border-radius: 3px; color: #a8d1ff;">can_eq</code>数字0或1，能否装备</li>
+                                                  <li style="margin: 0.5rem 0;"><code style="padding: 0.2rem 0.4rem; border-radius: 3px; color: #a8d1ff;">can_use</code>数字0或1，能否使用</li>
+                                                  <li style="margin: 0.5rem 0;"><code style="padding: 0.2rem 0.4rem; border-radius: 3px; color: #a8d1ff;">can_study</code>数字0或1，能否学习</li>
+                                                  <li style="margin: 0.5rem 0;"><code style="padding: 0.2rem 0.4rem; border-radius: 3px; color: #a8d1ff;">can_open</code>数字0或1，能否使用</li>
+                                                  <li style="margin: 0.5rem 0;"><code style="padding: 0.2rem 0.4rem; border-radius: 3px; color: #a8d1ff;">can_combine</code>数字0或1，能否合成</li>
+                                                  <li style="margin: 0.5rem 0;"><code style="padding: 0.2rem 0.4rem; border-radius: 3px; color: #a8d1ff;">is_lock</code>数字0或1，是否上锁</li>
+                                                  <li style="margin: 0.5rem 0;"><code style="padding: 0.2rem 0.4rem; border-radius: 3px; color: #a8d1ff;">otype</code>类型，目前可知：0：丹药，1：残页，3：鱼、药，4：装备</li>
+                                              </ol>
+
+                                              <h4 style="font-size: 18px; margin: 1rem 0 0.5rem; color: #e0e0e0;">4). 地图</h4>
+                                              <ol class="list-decimal pl-6 space-y-1" style="margin: 0 0 1rem; padding-left: 2rem;">
+                                                  <li style="margin: 0.5rem 0;"><code style="padding: 0.2rem 0.4rem; border-radius: 3px; color: #a8d1ff;">name</code>名字</li>
+                                                  <li style="margin: 0.5rem 0;"><code style="padding: 0.2rem 0.4rem; border-radius: 3px; color: #a8d1ff;">unlock</code>是否解锁。数字0或1</li>
+                                                  <li style="margin: 0.5rem 0;"><code style="padding: 0.2rem 0.4rem; border-radius: 3px; color: #a8d1ff;">index</code>地图索引。数字</li>
+                                                  <li style="margin: 0.5rem 0;"><code style="padding: 0.2rem 0.4rem; border-radius: 3px; color: #a8d1ff;">desc</code> 地图的描述</li>
+                                              </ol>
+                                          </div>
+                                      </span>
+                                  </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!-- 板块9：装备自制 -->
+                <div id="section9" class="content-section">
+                    
+                  <!-- 制作说明 -->
+                  <div class="intro" style="margin-bottom: 30px; line-height: 1.8;">
+                      <h2 class="text-[20px] md:text-[24px] font-medium" style="border-bottom: 1px solid #d5d4d4; margin-bottom: 15px">装备自制规则</h2>
+                      <p>• 制作需消耗10元晶，元晶通过分解橙色品质装备获取</p>
+                      <p>• 自制位置：扬州城--铁匠铺（武器类）、扬州城--成衣店（衣服类）、药王谷--鉴宝阁（首饰类）</p>
+                      <p>• 分解橙装可获取装备自带部分属性，作为自制添加属性的材料</p>
+                      <p>• 属性分类：基础属性、后天属性、高级属性、稀有属性、特殊属性</p>
+                      <p>• 每件装备最多添加4条属性，洗练次数影响属性条数上限及词条升级上限</p>
+                      <p>• 首次重铸添加0级属性（添加后属性提升），再次重铸显示可添加数量、升级/洗练选项</p>
+                      <p>• 词条升级需消耗对应属性材料，等级越高消耗越多；升级上限随洗练次数提升（每10次洗练+1级，最多6级，需50次洗练）</p>
+                      <p>• 替换词条返还全部消耗材料，分解不返还全部材料</p>
+                      <p>• 大部分稀有/特殊属性不跟随精炼成长，部分属性基础数值不同</p>
+                  </div>
+
+                  
+                  <div class="flex flex-col md:flex-row gap-10">
+                    <!-- 固定属性表格（无限制条数） -->
+                  <div class="attr-table-wrap" style="margin-bottom: 35px;">
+                      <h3 class="HIW text-[16px] md:text-[20px] font-medium">固定属性</h3>
+                      <p class="text-[14px] md:text-[16px] font-medium">每个部位装备都有固定属性</p>
+                      <p class="text-[14px] md:text-[16px] font-medium">武器：攻击 暗器-攻击；戒指-命中；项链-躲闪；护腕-招架；其余位置-防御</p>
+                    
+                  </div>
+                     <!-- 后天属性表格 -->
+                    <div class="attr-table-wrap " style="margin-bottom: 35px;">
+                        <h3 class="HIG text-[16px] md:text-[20px] font-medium">后天属性</h3>
+                        <p class="text-[14px] md:text-[16px] font-medium">限制条数：4条 | 适用位置：全部</p>
+                        <p class="text-[14px] md:text-[16px] font-medium">可选后天属性:臂力, 身法, 根骨, 悟性</p>
+                    </div>
+
+                    <!-- 基础属性表格 -->
+                    <div class="attr-table-wrap " style="margin-bottom: 35px;">
+                        <h3 class="HIC text-[16px] md:text-[20px] font-medium">基础属性</h3>
+                        <p class="text-[14px] md:text-[16px] font-medium">限制条数：4条 | 适用位置：全部</p>
+                        <p class="text-[14px] md:text-[16px] font-medium">可选择基础属性:攻击, 命中, 招架, 躲闪, 防御, 气血</p>
+                    </div>
+
+                  </div>
+                  
+
+                 
+                  <div class="flex flex-col md:flex-row" style="margin-bottom: 35px;">
+                      <!-- 高级属性表格 -->
+                      <div class="overflow-x-auto overflow-y-auto pr-2 md:w-1/2">
+                          <h3 class="HIY text-[16px] md:text-[20px] font-medium" style="text-align: center;">高级属性</h3>
+                          <p class="text-[14px] md:text-[16px] font-medium">限制条数：初始2条，洗练10次后3条，洗练50次后4条</p>
+                          <table class="equipment-table" style="text-align: center; table-layout: fixed;">
+                              <thead>
+                                  <tr>
+                                      <th class="py-2 bg-[#444444] text-[13px] md:text-[16px] rounded-tl-lg" style="width: 15%;">装备位置</th>
+                                      <th class="py-2 bg-[#444444] text-[13px] md:text-[16px] rounded-tr-lg">可选高级属性</th>
+                                  </tr>
+                              </thead>
+                              <tbody>
+                                  <tr class="bg-[#333333]">
+                                      <td class="py-3 text-[13px] md:text-[16px]">武器</td>
+                                      <td class="py-3 text-[13px] md:text-[16px]">攻击%, 命中%, 招架%, 气血%, 练习效率, 学习效率, 打坐效率</td>
+                                  </tr>
+                                  <tr class="bg-[#222222]">
+                                      <td class="py-3 text-[13px] md:text-[16px]">衣服</td>
+                                      <td class="py-3 text-[13px] md:text-[16px]">招架%, 躲闪%, 防御%, 气血%, 练习效率, 学习效率, 打坐效率</td>
+                                  </tr>
+                                  <tr class="bg-[#333333]">
+                                      <td class="py-3 text-[13px] md:text-[16px]">鞋</td>
+                                      <td class="py-3 text-[13px] md:text-[16px]">命中%, 躲闪%, 防御%, 气血%, 练习效率, 学习效率, 打坐效率</td>
+                                  </tr>
+                                  <tr class="bg-[#222222]">
+                                      <td class="py-3 text-[13px] md:text-[16px]">头部</td>
+                                      <td class="py-3 text-[13px] md:text-[16px]">命中%, 躲闪%, 防御%, 气血%, 练习效率, 学习效率, 打坐效率</td>
+                                  </tr>
+                                  <tr class="bg-[#333333]">
+                                      <td class="py-3 text-[13px] md:text-[16px]">披风</td>
+                                      <td class="py-3 text-[13px] md:text-[16px]">招架%, 躲闪%, 防御%, 气血%, 练习效率, 学习效率, 打坐效率</td>
+                                  </tr>
+                                  <tr class="bg-[#222222]">
+                                      <td class="py-3 text-[13px] md:text-[16px]">戒指</td>
+                                      <td class="py-3 text-[13px] md:text-[16px]">攻击%, 气血%, 练习效率, 学习效率, 打坐效率</td>
+                                  </tr>
+                                  <tr class="bg-[#333333]">
+                                      <td class="py-3 text-[13px] md:text-[16px]">项链</td>
+                                      <td class="py-3 text-[13px] md:text-[16px]">命中%, 招架%, 躲闪%, 气血%, 练习效率, 学习效率, 打坐效率</td>
+                                  </tr>
+                                  <tr class="bg-[#222222]">
+                                      <td class="py-3 text-[13px] md:text-[16px]">饰品</td>
+                                      <td class="py-3 text-[13px] md:text-[16px]">攻击%, 命中%, 招架%, 躲闪%, 防御%, 气血%, 练习效率, 学习效率, 打坐效率</td>
+                                  </tr>
+                                  <tr class="bg-[#333333]">
+                                      <td class="py-3 text-[13px] md:text-[16px]">护腕</td>
+                                      <td class="py-3 text-[13px] md:text-[16px]">命中%, 气血%, 练习效率, 学习效率, 打坐效率</td>
+                                  </tr>
+                                  <tr class="bg-[#222222]">
+                                      <td class="py-3 text-[13px] md:text-[16px]">腰带</td>
+                                      <td class="py-3 text-[13px] md:text-[16px]">攻击%, 招架%, 防御%, 气血%, 练习效率, 学习效率, 打坐效率</td>
+                                  </tr>
+                                  <tr class="bg-[#333333]">
+                                      <td class="py-3 text-[13px] md:text-[16px]">暗器</td>
+                                      <td class="py-3 text-[13px] md:text-[16px]">攻击%, 命中%, 气血%, 练习效率, 学习效率, 打坐效率</td>
+                                  </tr>
+                              </tbody>
+                          </table>
+                      </div>
+
+                      <!-- 稀有属性表格 -->
+                      <div class="overflow-x-auto overflow-y-auto pr-2 md:w-1/2">
+                          <h3 class="HIZ text-[16px] md:text-[20px] font-medium" style="text-align: center;">稀有属性</h3>
+                          <p class="text-[14px] md:text-[16px] font-medium">限制条数：初始1条，洗练10次后2条，洗练150次后3条</p>
+                          <table class="equipment-table" style="text-align: center; table-layout: fixed;">
+                              <thead>
+                                  <tr>
+                                      <th class="py-2 bg-[#444444] text-[13px] md:text-[16px] rounded-tl-lg" style="width: 15%;">装备位置</th>
+                                      <th class="py-2 bg-[#444444] text-[13px] md:text-[16px] rounded-tr-lg">可选稀有属性</th>
+                                  </tr>
+                              </thead>
+                              <tbody>
+                                  <tr class="bg-[#333333]">
+                                      <td class="py-3 text-[13px] md:text-[16px]">武器</td>
+                                      <td class="py-3 text-[13px] md:text-[16px]">最终伤害, 暴击伤害, 忽视对方防御, 绝招释放时间%, 攻击速度%, 内力消耗%</td>
+                                  </tr>
+                                  <tr class="bg-[#222222]">
+                                      <td class="py-3 text-[13px] md:text-[16px]">衣服</td>
+                                      <td class="py-3 text-[13px] md:text-[16px]">绝招释放时间%, 攻击速度%, 伤害减免, 忽视忙乱%</td>
+                                  </tr>
+                                  <tr class="bg-[#333333]">
+                                      <td class="py-3 text-[13px] md:text-[16px]">鞋</td>
+                                      <td class="py-3 text-[13px] md:text-[16px]">伤害减免, 忽视忙乱%</td>
+                                  </tr>
+                                  <tr class="bg-[#222222]">
+                                      <td class="py-3 text-[13px] md:text-[16px]">头部</td>
+                                      <td class="py-3 text-[13px] md:text-[16px]">绝招释放时间%, 忽视忙乱%, 内力消耗%</td>
+                                  </tr>
+                                  <tr class="bg-[#333333]">
+                                      <td class="py-3 text-[13px] md:text-[16px]">披风</td>
+                                      <td class="py-3 text-[13px] md:text-[16px]">最终伤害, 伤害减免, 忽视忙乱%</td>
+                                  </tr>
+                                  <tr class="bg-[#222222]">
+                                      <td class="py-3 text-[13px] md:text-[16px]">戒指</td>
+                                      <td class="py-3 text-[13px] md:text-[16px]">忽视对方防御, 绝招释放时间%, 伤害减免, 内力消耗%</td>
+                                  </tr>
+                                  <tr class="bg-[#333333]">
+                                      <td class="py-3 text-[13px] md:text-[16px]">项链</td>
+                                      <td class="py-3 text-[13px] md:text-[16px]">忽视对方防御</td>
+                                  </tr>
+                                  <tr class="bg-[#222222]">
+                                      <td class="py-3 text-[13px] md:text-[16px]">饰品</td>
+                                      <td class="py-3 text-[13px] md:text-[16px]">攻击速度%, 伤害减免, 内力消耗%</td>
+                                  </tr>
+                                  <tr class="bg-[#333333]">
+                                      <td class="py-3 text-[13px] md:text-[16px]">护腕</td>
+                                      <td class="py-3 text-[13px] md:text-[16px]">最终伤害, 暴击伤害, 忽视对方防御, 绝招释放时间%, 内力消耗%</td>
+                                  </tr>
+                                  <tr class="bg-[#222222]">
+                                      <td class="py-3 text-[13px] md:text-[16px]">腰带</td>
+                                      <td class="py-3 text-[13px] md:text-[16px]">绝招释放时间%, 忽视忙乱%</td>
+                                  </tr>
+                                  <tr class="bg-[#333333]">
+                                      <td class="py-3 text-[13px] md:text-[16px]">暗器</td>
+                                      <td class="py-3 text-[13px] md:text-[16px]">最终伤害, 暴击伤害, 忽视对方防御</td>
+                                  </tr>
+                              </tbody>
+                          </table>
+                      </div>
+                  </div>
+                  <!-- 特殊属性表格 -->
+                  <div class="overflow-x-auto overflow-y-auto pr-2 md:max-w-5xl">
+                      <h3 class="HIO text-[16px] md:text-[20px] font-medium" style="text-align: center;">特殊属性</h3>
+                      <p class="text-[14px] md:text-[16px] font-medium">限制条数：初始1条，洗练50次后2条</p>
+                      <table class="equipment-table" style="text-align: center; table-layout: fixed;">
+                          <thead>
+                              <tr>
+                                  <th class="py-2 bg-[#444444] text-[13px] md:text-[16px] rounded-tl-lg" style="width: 20%;">装备位置</th>
+                                  <th class="py-2 bg-[#444444] text-[13px] md:text-[16px] rounded-tr-lg">可选特殊属性</th>
+                              </tr>
+                          </thead>
+                          <tbody>
+                              <tr class="bg-[#333333]">
+                                  <td class="py-3 text-[13px] md:text-[16px]">武器</td>
+                                  <td class="py-3 text-[13px] md:text-[16px]">暴击, 绝招冷却时间%, 绝招释放时间，忙乱时间</td>
+                              </tr>
+                              <tr class="bg-[#222222]">
+                                  <td class="py-3 text-[13px] md:text-[16px]">衣服</td>
+                                  <td class="py-3 text-[13px] md:text-[16px]">伤害减免%</td>
+                              </tr>
+                              <tr class="bg-[#333333]">
+                                  <td class="py-3 text-[13px] md:text-[16px]">鞋</td>
+                                  <td class="py-3 text-[13px] md:text-[16px]">负面抵抗%</td>
+                              </tr>
+                              <tr class="bg-[#222222]">
+                                  <td class="py-3 text-[13px] md:text-[16px]">头部</td>
+                                  <td class="py-3 text-[13px] md:text-[16px]">暴击, 绝招冷却时间%, 绝招冷却时间, 负面抵抗%, 容貌</td>
+                              </tr>
+                              <tr class="bg-[#333333]">
+                                  <td class="py-3 text-[13px] md:text-[16px]">披风</td>
+                                  <td class="py-3 text-[13px] md:text-[16px]">负面抵抗%，伤害减免%</td>
+                              </tr>
+                              <tr class="bg-[#222222]">
+                                  <td class="py-3 text-[13px] md:text-[16px]">戒指</td>
+                                  <td class="py-3 text-[13px] md:text-[16px]">暴击, 绝招释放时间，攻击速度s</td>
+                              </tr>
+                              <tr class="bg-[#333333]">
+                                  <td class="py-3 text-[13px] md:text-[16px]">项链</td>
+                                  <td class="py-3 text-[13px] md:text-[16px]">绝招冷却时间%, 绝招冷却时间, 容貌</td>
+                              </tr>
+                              <tr class="bg-[#222222]">
+                                  <td class="py-3 text-[13px] md:text-[16px]">饰品</td>
+                                  <td class="py-3 text-[13px] md:text-[16px]">暴击, 绝招释放时间, 容貌，攻击速度s</td>
+                              </tr>
+                              <tr class="bg-[#333333]">
+                                  <td class="py-3 text-[13px] md:text-[16px]">护腕</td>
+                                  <td class="py-3 text-[13px] md:text-[16px]">暴击, 绝招冷却时间, 绝招释放时间, 忙乱时间%，攻击速度s</td>
+                              </tr>
+                              <tr class="bg-[#222222]">
+                                  <td class="py-3 text-[13px] md:text-[16px]">腰带</td>
+                                  <td class="py-3 text-[13px] md:text-[16px]">忙乱时间%，忙乱时间，伤害减免%</td>
+                              </tr>
+                              <tr class="bg-[#333333]">
+                                  <td class="py-3 text-[13px] md:text-[16px]">暗器</td>
+                                  <td class="py-3 text-[13px] md:text-[16px]">暴击</td>
+                              </tr>
+                          </tbody>
+                      </table>
+                  </div>
+
+                </div>
+            </div>
+        </div>
+    </div>
+    <script src="武神2综合工具网页版-data.js"></script>
+    <script src="武神2综合工具网页版.js"></script>
+    </body>
+</html>
