@@ -378,6 +378,193 @@ Object.assign(WG, {
                 messageAppend("<hig>未找到 Raid 引擎，无法执行自动使用</hig>");
             }
         },
+        // 【2026-08-24】取清单里"背包中实际存在"的物品全名（去颜色标签、去重），用于分步进度提示。
+        _tidyPresentNames: function (listStr) {
+            const names = String(listStr || "").split(",").map(function (s) { return s.trim(); }).filter(function (s) { return s; });
+            const result = [];
+            try {
+                const items = (unsafeWindow.Role && unsafeWindow.Role.items) ? Object.values(unsafeWindow.Role.items) : [];
+                names.forEach(function (n) {
+                    const patt = new RegExp(n);
+                    items.forEach(function (it) {
+                        if (it && it.name && patt.test(it.name)) {
+                            const full = String(it.name).replace(/<[^>]+>/g, "").trim();
+                            if (full && result.indexOf(full) == -1) result.push(full);
+                        }
+                    });
+                });
+            } catch (e) { }
+            return result;
+        },
+
+        // 【2026-08-24 增强 @tidyBag】自动使用（阻塞式）：
+        // 按 autoUseList 生成 Raid 流程并启动，轮询"清单物品是否全部用尽"，直到用完或超时才 resolve，
+        // 保证使用动作真正完成后再进入下一步（卖/存）。
+        tidyBlockUse: function (stepLog) {
+            return new Promise(function (resolve) {
+                const names = (autoUseList || "").split(",").map(function (s) { return s.trim(); }).filter(function (s) { return s; });
+                const present = WG._tidyPresentNames(autoUseList);
+                if (present.length === 0) {
+                    try { if (stepLog) stepLog("当前无需自动使用"); } catch (e) { }
+                    resolve(); return;
+                }
+                try { if (stepLog) stepLog("自动使用：" + present.join("、")); } catch (e) { }
+                let source = "//~silent\n@cmdDelay 0\npack\n";
+                names.forEach(function (name) {
+                    source += "[while] {b(" + name + ")}? != null\n";
+                    source += "    use {b(" + name + ")}\n";
+                    source += "    @await 100\n";
+                });
+                if (!(unsafeWindow && unsafeWindow.ToRaid && unsafeWindow.ToRaid.perform)) { resolve(); return; }
+                unsafeWindow.ToRaid.perform(source, "自动使用(整理包裹)", false);
+                const start = Date.now();
+                (function poll() {
+                    let allGone = names.every(function (n) {
+                        try { return unsafeWindow.Role.findItem(n, true) == null; } catch (e) { return true; }
+                    });
+                    if (allGone || Date.now() - start >= 20000) { resolve(); return; }
+                    setTimeout(poll, 600);
+                }());
+            });
+        },
+
+        // 【2026-08-24 增强 @tidyBag】收集需分解的物品列表（匹配 fenjieList + 背包中可分解装备），供自解/随从解共用。
+        _tidyFenjieItemList: function () {
+            const list = [];
+            try {
+                const fjlist = (GM_getValue(roleid + "_fenjieList") || "").split(",");
+                const pack = (GameState.packs && GameState.packs.items) ? GameState.packs.items : [];
+                for (let i = 0; i < fjlist.length; i++) {
+                    const item = fjlist[i].trim();
+                    if (!item) continue;
+                    const match = item.match(/^([\u4e00-\u9fa5]+)(\d*)$|^(\d+)$/);
+                    const name = match && match[3] ? null : (match ? match[1] || null : null);
+                    const grade = match ? (match[3] || match[2] || null) : null;
+                    for (let j = 0; j < pack.length; j++) {
+                        const p = pack[j];
+                        if (!p || !p.can_eq || p.locked) continue;
+                        const nameMatch = name ? (p.name ? String(p.name).indexOf(name) != -1 : false) : true;
+                        const gradeMatch = grade ? (p.grade == grade) : true;
+                        if (nameMatch && gradeMatch) list.push({ id: p.id, name: p.name ? String(p.name).replace(/<[^>]+>/g, "").trim() : "" });
+                    }
+                }
+            } catch (e) { }
+            return list;
+        },
+
+        // 【2026-08-24 修复】随从逐件分解：先去找随从并 stopstate，然后一件一件
+        //   `give {r随从} <id>;dc {r随从} fenjie <id>`，靠文本信号确认上一件完成/被拒后再发下一件，
+        //   避免批量连发打到正忙的随从导致"你要给XX什么东西？ / 没时间这么做"等悬空提示。
+        tidyDecomposeFollower: function (items, names, stepLog) {
+            return new Promise(function (resolve) {
+                const fname = fj_sc || "";
+                if (!fname || !items || items.length === 0) { resolve(); return; }
+                const nameText = (names && names.length) ? names.join("、") : (items.length + "件装备");
+                try { if (stepLog) stepLog("随从" + fname + "逐件分解：" + nameText); } catch (e) { }
+                const fworkEl = (GameState.relation.follower || []).find(function (i) { return i && i[0] && String(i[0]).indexOf(fname) != -1; });
+                const fworkCmd = (fworkEl && fworkEl[2]) ? `dc {r${fname}} ${fworkEl[2]};` : "";
+                let idx = 0;
+                let moving = false;      // 是否已发出当前件的 give+fenjie，等待完成信号
+                let moveTimer = null;
+                let finished = false;
+
+                const finish = function () {
+                    if (finished) return;
+                    finished = true;
+                    if (hookId != null) { try { WG.remove_hook(hookId); } catch (e) { } }
+                    if (moveTimer) clearTimeout(moveTimer);
+                    if (fworkCmd) WG.SendCmd(fworkCmd);   // 恢复随从原工作
+                    try { if (stepLog) stepLog("随从分解结束"); } catch (e) { }
+                    resolve();
+                };
+                let hookId = null;
+
+                const next = function () {
+                    if (moveTimer) { clearTimeout(moveTimer); moveTimer = null; }
+                    if (idx >= items.length) { finish(); return; }
+                    const it = items[idx]; idx++;
+                    moving = true;
+                    WG.SendCmd(`give {r${fname}} ${it.id};dc {r${fname}} fenjie ${it.id};`);
+                    // 兜底：长时间未收到完成/失败信号则跳过该件，避免卡死
+                    moveTimer = WG._tapSched(function () { moving = false; next(); }, 2000);
+                };
+
+                hookId = WG.add_hook("text", function (data) {
+                    if (finished || !moving) return;
+                    const m = (data && data.msg) ? String(data.msg) : "";
+                    if (m.indexOf(fname) == -1) return;
+                    // 成功：王语嫣将XX分解为N块玄晶
+                    if (m.indexOf("分解为") != -1) { moving = false; next(); return; }
+                    // 失败/被拒：正在做、没时间、要给出、要分解等致 give/fenjie 中断
+                    if (m.indexOf("正在") != -1 || m.indexOf("没时间这么做") != -1 ||
+                        m.indexOf("要给出") != -1 || m.indexOf("要分解") != -1) { moving = false; next(); }
+                });
+
+                // 开场：去找随从并停掉其当前动作（如挖矿），再开始逐件分解
+                WG.SendCmd(`goto home;go northeast;$wait 200;dc {r${fname}} stopstate;`);
+                WG._tapSched(function () { next(); }, 2500);
+            });
+        },
+
+        // 【2026-08-24 增强 @tidyBag】自动售卖（阻塞式）：
+        // 按 autoSellList 生成 Raid 流程，轮询"清单物品是否卖完"直到结束或超时，保证清单售卖完成后再卖光剩余。
+        tidyBlockSell: function (stepLog) {
+            return new Promise(function (resolve) {
+                const names = (autoSellList || "").split(",").map(function (s) { return s.trim(); }).filter(function (s) { return s; });
+                const present = WG._tidyPresentNames(autoSellList);
+                if (present.length === 0) {
+                    try { if (stepLog) stepLog("当前无需按清单售卖"); } catch (e) { }
+                    resolve(); return;
+                }
+                try { if (stepLog) stepLog("按清单售卖：" + present.join("、")); } catch (e) { }
+                let source = "//~silent\n@cmdDelay 0\npack\n";
+                names.forEach(function (name) {
+                    source += "[while] {b(" + name + ")}? != null\n";
+                    source += "    sell {b(" + name + ")}\n";
+                    source += "    @await 100\n";
+                });
+                if (!(unsafeWindow && unsafeWindow.ToRaid && unsafeWindow.ToRaid.perform)) { resolve(); return; }
+                unsafeWindow.ToRaid.perform(source, "自动售卖(整理包裹)", false);
+                const start = Date.now();
+                (function poll() {
+                    let allGone = names.every(function (n) {
+                        try { return unsafeWindow.Role.findItem(n, true) == null; } catch (e) { return true; }
+                    });
+                    if (allGone || Date.now() - start >= 15000) { resolve(); return; }
+                    setTimeout(poll, 600);
+                }());
+            });
+        },
+
+        // 【2026-08-24 增强 @tidyBag】发送分解命令并阻塞（随从逐件由文本信号确认，自身分解批量+等空闲）。
+        tidyBlockFenjie: function (stepLog) {
+            return new Promise(function (resolve) {
+                const usedFollower = follower_fenjie == '开' || follower_fenjie === true || follower_fenjie === 'true';
+                const items = WG._tidyFenjieItemList();
+                const names = items.map(function (it) { return it.name; }).filter(function (n) { return n; });
+                if (items.length === 0) {
+                    try { if (stepLog) stepLog("当前无需分解装备"); } catch (e) { }
+                    resolve(); return;
+                }
+                if (usedFollower) {
+                    // 随从：逐件 + 文本完成信号阻塞
+                    WG.tidyDecomposeFollower(items, names, stepLog).then(resolve);
+                    return;
+                }
+                // 自身分解：批量 fenjie 后轮询主玩家空闲
+                try { if (stepLog) stepLog("分解装备：" + names.join("、")); } catch (e) { }
+                let cmd = "";
+                items.forEach(function (it) { cmd += `fenjie ${it.id};$wait 400;`; });
+                WG.SendCmd(cmd);
+                const start = Date.now();
+                (function poll() {
+                    let free = true;
+                    try { free = !!(unsafeWindow.Role && unsafeWindow.Role.isFree()); } catch (e) { free = true; }
+                    if (free || Date.now() - start >= 30000) { resolve(); return; }
+                    setTimeout(poll, 600);
+                }());
+            });
+        },
         timer_close: function () {
             if (timer) {
                 clearInterval(timer);
@@ -571,13 +758,66 @@ Object.assign(WG, {
                 return true;
             }
         },
+        // 【2026-08-24】后台标签页安全的计时源（Web Worker 驱动自动出招）：
+        // 主线程 setTimeout/setInterval 在后台会被浏览器节流（~1s、久后 1min），导致自动出招卡住；
+        // Web Worker 定时器不受后台节流影响。这里用单个 worker 每 50ms 报到，主线程按 wall-clock
+        // 截止时间统一结算到期回调。出招开启时创建、关闭时销毁，内存占用极小。
+        _tapCreate: function () {
+            if (WG._tap) { try { WG._tapDestroy(); } catch (e) { } }
+            try {
+                const src = "setInterval(function(){postMessage(0);},50);";
+                const url = URL.createObjectURL(new Blob([src], { type: "application/javascript" }));
+                const worker = new Worker(url);
+                let queue = [];
+                worker.onmessage = function () {
+                    const now = Date.now();
+                    for (let i = 0; i < queue.length; i++) {
+                        const item = queue[i];
+                        if (item && item.t <= now) {
+                            queue[i] = null;
+                            try { item.fn(); } catch (e) { }
+                        }
+                    }
+                    if (queue.length) queue = queue.filter(Boolean);
+                };
+                WG._tap = {
+                    worker: worker, url: url,
+                    sched: function (fn, ms) {
+                        const item = { t: Date.now() + (ms | 0), fn: fn };
+                        queue.push(item);
+                        return item;
+                    },
+                    sleep: function (ms) {
+                        return new Promise(function (res) { WG._tap.sched(function () { res(); }, ms); });
+                    },
+                    destroy: function () {
+                        try { worker.terminate(); } catch (e) { }
+                        try { URL.revokeObjectURL(url); } catch (e) { }
+                        queue.length = 0;
+                        WG._tap = null;
+                    }
+                };
+            } catch (e) { WG._tap = null; }
+        },
+        _tapSched: function (fn, ms) {
+            if (WG._tap && WG._tap.sched) return WG._tap.sched(fn, ms);
+            return setTimeout(fn, ms);
+        },
+        _tapSleep: function (ms) {
+            if (WG._tap && WG._tap.sleep) return WG._tap.sleep(ms);
+            return new Promise(function (res) { setTimeout(res, ms); });
+        },
+        _tapDestroy: function () {
+            if (WG._tap && WG._tap.destroy) WG._tap.destroy();
+        },
         auto_preform: function (v) {
             if (v == "stop") {
                 GameState.selfStatus = [];
                 WG.xubuf = null;
                 WG.pfmskill = null;
                 if (WG.preform_timer) {
-                    clearInterval(WG.preform_timer);
+                    // 【2026-08-24】销毁 worker 计时源，取消未到的出招回调
+                    try { WG._tapDestroy(); } catch (e) { }
                     WG.preform_timer = undefined;
                     $(".auto_perform").css("background", "");
                     WG.forcebufskil = ''
@@ -615,11 +855,13 @@ Object.assign(WG, {
                 }
                 WG.xubuf = null;
                 WG.pfmskill = null
-                WG.preform_timer = setInterval(() => {
+                WG._tapCreate();
+                WG.preform_timer = true;
+                const _smartTick = function () {
                     if (GameState.fight.in_fight == false) { WG.auto_preform("stop"); return; }
                     var alreay_pfm = [];
                     if (WG.xubuf == null) {
-                        WG.xubuf = setTimeout(async () => {
+                        WG.xubuf = WG._tapSched(async () => {
                             for (var skill of GameState.skills.perform) {
                                 if (WG.hasStr(skill.id, blackpfm)) {
                                     continue;
@@ -629,21 +871,21 @@ Object.assign(WG, {
                                         if (ski == skill.id) {
                                             if (!WG.gcd && !WG.cds.get(skill.id)?.iscd && !WG.hasStr(buf, GameState.selfStatus)) {
                                                 WG.Send("perform " + skill.id);
-                                                setTimeout(function () {
+                                                WG._tapSched(function () {
                                                     var _c = WG.cds.get(skill.id);
                                                     if (_c && _c.iscd && _c.distime === 601) { WG.cds.set(skill.id, { iscd: false, distime: 0 }); }
                                                 }, 750);
                                                 // break;
-                                                await WG.sleep(200);
+                                                await WG._tapSleep(200);
                                                 while (!WG.cds.get(skill.id)?.iscd) {
                                                     if (GameState.fight.in_fight == false) { WG.auto_preform("stop"); return; }
                                                     if (!WG.is_free()) break;
                                                     WG.Send("perform " + skill.id);
-                                                    setTimeout(function () {
+                                                    WG._tapSched(function () {
                                                         var _c = WG.cds.get(skill.id);
                                                         if (_c && _c.iscd && _c.distime === 601) { WG.cds.set(skill.id, { iscd: false, distime: 0 }); }
                                                     }, 750);
-                                                    await WG.sleep(200);
+                                                    await WG._tapSleep(200);
                                                 }
                                                 if (WG.hasStr(buf, GameState.selfStatus)) {
                                                     console.log('buff技能' + skill.id)
@@ -659,21 +901,21 @@ Object.assign(WG, {
                                 if (WG.hasStr(skill.id, force_buff_skill)) {
                                     if (!WG.gcd && !WG.cds.get(skill.id)?.iscd && !WG.hasStr("force", GameState.selfStatus)) {
                                         WG.Send("perform " + skill.id);
-                                        setTimeout(function () {
+                                        WG._tapSched(function () {
                                             var _c = WG.cds.get(skill.id);
                                             if (_c && _c.iscd && _c.distime === 601) { WG.cds.set(skill.id, { iscd: false, distime: 0 }); }
                                         }, 750);
                                         // break;
-                                        await WG.sleep(200);
+                                        await WG._tapSleep(200);
                                         while (!WG.cds.get(skill.id)?.iscd && !WG.hasStr("force", GameState.selfStatus)) {
                                             if (GameState.fight.in_fight == false) { WG.auto_preform("stop"); return; }
                                             if (!WG.is_free()) break;
                                             WG.Send("perform " + skill.id);
-                                            setTimeout(function () {
+                                            WG._tapSched(function () {
                                                 var _c = WG.cds.get(skill.id);
                                                 if (_c && _c.iscd && _c.distime === 601) { WG.cds.set(skill.id, { iscd: false, distime: 0 }); }
                                             }, 750);
-                                            await WG.sleep(200);
+                                            await WG._tapSleep(200);
 
                                         }
                                         if (WG.hasStr("force", GameState.selfStatus)) {
@@ -689,7 +931,7 @@ Object.assign(WG, {
                         }, 10);
                     }
                     if (WG.pfmskill == null) {
-                        WG.pfmskill = setTimeout(async () => {
+                        WG.pfmskill = WG._tapSched(async () => {
                             for (var skill of GameState.skills.perform) {
                                 if (WG.hasStr(skill.id, blackpfm)) {
                                     continue;
@@ -698,7 +940,7 @@ Object.assign(WG, {
                                 // console.log(skill);
                                 if (!WG.gcd && !WG.cds.get(skill.id)?.iscd && !(WG.hasStr(skill.id, force_buff_skill) || WG.hasStr(skill.id, buff_skill_dict))) {
                                     WG.Send("perform " + skill.id);
-                                    setTimeout(function () {
+                                    WG._tapSched(function () {
                                         var _c = WG.cds.get(skill.id);
                                         if (_c && _c.iscd && _c.distime === 601) { WG.cds.set(skill.id, { iscd: false, distime: 0 }); }
                                     }, 750);
@@ -709,7 +951,7 @@ Object.assign(WG, {
                                         !WG.hasStr(skill.id, buff_skill_dict['mingyu']) && !WG.hasStr(skill.id, buff_skill_dict['ztd'])) {
                                         console.log('使用无buff的内功技能' + skill.id)
                                         WG.Send("perform " + skill.id);
-                                        setTimeout(function () {
+                                        WG._tapSched(function () {
                                             var _c = WG.cds.get(skill.id);
                                             if (_c && _c.iscd && _c.distime === 601) { WG.cds.set(skill.id, { iscd: false, distime: 0 }); }
                                         }, 750);
@@ -721,7 +963,7 @@ Object.assign(WG, {
                                 //         !WG.hasStr(skill.id, buff_skill_dict['mingyu']) && !WG.hasStr(skill.id, buff_skill_dict['ztd'])) {
                                 //         console.log('使用无buff的武器技能' + skill.id)
                                 //         WG.Send("perform " + skill.id);
-                                setTimeout(function () {
+                                WG._tapSched(function () {
                                     var _c = WG.cds.get(skill.id);
                                     if (_c && _c.iscd && _c.distime === 601) { WG.cds.set(skill.id, { iscd: false, distime: 0 }); }
                                 }, 750);
@@ -733,11 +975,19 @@ Object.assign(WG, {
                             WG.pfmskill = null
                         }, 10);
                     }
-                }, 300);
+                };
+                (function schedSmart() {
+                    WG._tapSched(function () {
+                        if (!WG.preform_timer) return;
+                        _smartTick();
+                        schedSmart();
+                    }, 300);
+                })();
             }
             else {
-                WG.preform_timer = setInterval(() => {
-
+                WG._tapCreate();
+                WG.preform_timer = true;
+                const _normalTick = function () {
                     if (GameState.fight.in_fight == false) WG.auto_preform("stop");
                     for (var skill of GameState.skills.perform) {
 
@@ -746,14 +996,21 @@ Object.assign(WG, {
                         }
                         if (!WG.gcd && !WG.cds.get(skill.id)?.iscd) {
                             WG.Send("perform " + skill.id);
-                            setTimeout(function () {
+                            WG._tapSched(function () {
                                 var _c = WG.cds.get(skill.id);
                                 if (_c && _c.iscd && _c.distime === 601) { WG.cds.set(skill.id, { iscd: false, distime: 0 }); }
                             }, 750);
                             break;
                         }
                     }
-                }, 350);
+                };
+                (function schedNormal() {
+                    WG._tapSched(function () {
+                        if (!WG.preform_timer) return;
+                        _normalTick();
+                        schedNormal();
+                    }, 350);
+                })();
             }
         },
 

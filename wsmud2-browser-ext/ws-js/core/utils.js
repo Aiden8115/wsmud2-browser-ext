@@ -231,7 +231,7 @@ var RaidAutoComplete = {
         { label: "@stop", detail: "stop name - 停止流程", insert: "@stop " },
         { label: "@task", detail: "task text - 等待任务提示", insert: "@task " },
         { label: "@taohualin", detail: "taohualin - 桃花林", insert: "@taohualin" },
-        { label: "@tidyBag", detail: "tidyBag - 整理背包(含丢弃)", insert: "@tidyBag" },
+        { label: "@tidyBag", detail: "tidyBag - 整理背包(使用→分解→清单卖→卖光→存仓)", insert: "@tidyBag" },
         { label: "@tip", detail: "tip text - 等待场景提示", insert: "@tip " },
         { label: "@toolbar", detail: "toolbar - 显示工具栏", insert: "@toolbar" },
         { label: "@until", detail: "until condition - 等待条件成立", insert: "@until " },

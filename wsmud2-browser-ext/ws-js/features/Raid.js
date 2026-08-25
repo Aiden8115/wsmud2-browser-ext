@@ -3777,11 +3777,34 @@
     })();
 
     (function () {
+        // 【2026-08-24 增强】@tidyBag：真正的一键整理包裹，固定顺序
+        //   stopstate → 自动使用 → 分解 → 清单售卖(autoSellList) → 卖光剩余 → 存仓
+        // 使用/分解/清单售卖均做"阻塞"（轮询物品用尽/角色空闲），确保上一步完成后再进入下一步。
         const executor = new AtCmdExecutor("tidyBag", function (performer, param) {
-            if (performer.log()) Message.cmdLog("整理包裹");
-            return UntilRoleFreePerformerPromise(resolve => {
-                WG.SendCmd("sell all;store all");
-                setTimeout(resolve, 1000);
+            // 分步进度提示（始终显示，不受 performer.log 开关限制）
+            const step = function (m) { Message.cmdLog(m); };
+            Message.cmdLog("整理包裹开始");
+            return new Promise(function (resolve) {
+                // 0) 先 stopstate 停掉当前动作，避免与新指令冲突
+                WG.SendCmd("stopstate");
+                setTimeout(function () {
+                    // 1) 自动使用（阻塞）
+                    Message.cmdLog("[1/4] 自动使用物品");
+                    WG.tidyBlockUse(step).then(function () {
+                        // 2) 分解（阻塞）
+                        Message.cmdLog("[2/4] 分解装备");
+                        WG.tidyBlockFenjie(step).then(function () {
+                            // 3) 按 autoSellList 清单售卖（阻塞）
+                            Message.cmdLog("[3/4] 按清单售卖");
+                            WG.tidyBlockSell(step).then(function () {
+                                // 4) 卖光剩余 + 存仓
+                                Message.cmdLog("[4/4] 卖光剩余并存入仓库");
+                                WG.SendCmd("sell all;store all");
+                                setTimeout(function () { Message.cmdLog("整理包裹完成"); resolve(); }, 1000);
+                            });
+                        });
+                    });
+                }, 500);
             });
         });
         CmdExecuteCenter.addExecutor(executor);

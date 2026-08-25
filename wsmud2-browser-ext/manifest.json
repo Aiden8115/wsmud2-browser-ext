@@ -14,7 +14,7 @@
   "name": "WSMUD 插件",
 
   // 扩展版本号：改这里后，chrome://extensions 页面会显示新版本
-  "version": "26.3.10",
+  "version": "26.3.11",
 
   // 扩展简介（chrome://extensions 里能看到）
   "description": "增强《MUD游戏，武神传说》的游戏体验",

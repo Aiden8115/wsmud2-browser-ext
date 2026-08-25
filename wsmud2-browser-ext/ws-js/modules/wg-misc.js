@@ -146,7 +146,18 @@ function intToChineseNum(n) {
 
 Object.assign(WG, {
       zdybtnfunc: function (type) {
-          WG.SendCmd(zdy_btnlist[type].send);
+          const item = (zdy_btnlist && zdy_btnlist[type]) ? zdy_btnlist[type] : null;
+          const send = (item && item.send) || "";
+          const name = (item && item.name) || ("自定义按钮" + (type + 1));
+          const content = String(send).trim();
+          if (!content) return;
+          // 【2026-08-24】自定义按钮统一走 Raid 引擎：既能执行普通游戏命令，也能执行 @ 语句/流程（如 @tidyBag）。
+          // Raid 引擎不可用时回退为直接发送游戏命令。
+          if (unsafeWindow && unsafeWindow.ToRaid && unsafeWindow.ToRaid.perform) {
+              unsafeWindow.ToRaid.perform(content, name, false);
+          } else {
+              WG.SendCmd(content);
+          }
       },
       zdy_btnset: function () {
           zdy_btnlist = GM_getValue(roleid + "_zdy_btnlist", zdy_btnlist);

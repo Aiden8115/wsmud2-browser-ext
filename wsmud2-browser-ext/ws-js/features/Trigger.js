@@ -1013,24 +1013,51 @@
         TriggerTemplateCenter.add(t);
 
         const run = function () {
-            function timer() {
-                const date = new Date();
-                const params = {
-                    "hour": date.getHours(),
-                    "minute": date.getMinutes(),
-                    "second": date.getSeconds()
-                };
-                const n = new Notification("时辰已到", params);
+            // 【2026-08-24】"时辰已到"时钟改为【双源冗余】，确保服务器/后台/深度节流下到点绝不出错：
+            //   ① Web Worker 时钟 —— worker 定时器后台不被节流，消息投递也不受节流；
+            //   ② 主线程对齐定时器 —— 作为兜底基准（服务器前台常驻/无后台时同样精确）。
+            //   两个来源都调用同一个 settle()：它按真实 wall-clock 去重投递 + 无条件回补漏秒，
+            //   因此即便其中一路失效（如 worker 被 CSP/环境禁用，或主线程被节流），另一路仍保证不漏。
+            let lastBoundary = null;   // 上一次已投递的整秒边界（epoch 毫秒）
+            function postSecond(ms) {
+                const d = new Date(ms);
+                const n = new Notification("时辰已到", {
+                    "hour": d.getHours(),
+                    "minute": d.getMinutes(),
+                    "second": d.getSeconds()
+                });
                 NotificationCenter.post(n);
-
-                const nowTime = Date.now();
-                const nextTime = parseInt((nowTime + 1e3) / 1e3) * 1e3 + 1;
-
-                setTimeout(() => {
-                    timer();
-                }, nextTime - nowTime);
             }
-            timer();
+            function settle(nowMs) {
+                const curBound = Math.floor(nowMs / 1000) * 1000;
+                if (lastBoundary == null) {
+                    lastBoundary = curBound;
+                    postSecond(curBound);
+                } else if (curBound > lastBoundary) {
+                    // 无条件回补自上次投递以来漏掉的每个整秒，无论冻结/卡顿多久都不漏
+                    for (let b = lastBoundary + 1000; b <= curBound; b += 1000) {
+                        postSecond(b);
+                    }
+                    lastBoundary = curBound;
+                }
+            }
+            // 来源②：主线程对齐定时器（兜底基准，始终运行）
+            (function mainClock() {
+                try { settle(Date.now()); } catch (e) { }
+                const now = Date.now();
+                const nextBoundary = (Math.floor(now / 1000) * 1000) + 1000;
+                setTimeout(function () { mainClock(); }, nextBoundary + 1 - now);
+            })();
+            // 来源①：Web Worker 时钟（抗后台节流；失败不影响来源②）
+            try {
+                const url = URL.createObjectURL(new Blob(
+                    ["setInterval(function(){postMessage(1);},250);"],
+                    { type: "application/javascript" }
+                ));
+                const worker = new Worker(url);
+                worker.onmessage = function () { try { settle(Date.now()); } catch (e) { } };
+                window.__wsmud_time_worker = worker;   // 保活引用，防 worker 被 GC 回收
+            } catch (e) { /* 忽略：主线程时钟已可独立工作 */ }
         };
         const monitor = new Monitor(run);
         MonitorCenter.addMonitor(monitor);
