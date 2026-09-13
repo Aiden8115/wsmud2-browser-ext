@@ -13,8 +13,8 @@ window.__funny2_layout = window.__funny2_layout || {};
         /********************QUICK BTN 主题分组着色********************/
         // 【2026-09-08 和谐化】左侧快捷按钮四行按语义配主题色，flex 等距排布
         GM_addStyle([
-            '.left-hotkeys > div { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 6px; }',
-            '.left-hotkeys .span-btn { margin: 0; flex: 1 1 0; min-width: 0; padding: 3px 4px; font-size: 12px; justify-content: center; box-sizing: border-box; white-space: nowrap; background: transparent; border-color: var(--ws-border); }',
+            '.left-hotkeys > div { display: flex; flex-wrap: wrap; gap: 0; margin-bottom: 6px; justify-content: flex-start; }',
+            '.left-hotkeys .span-btn { margin: 0; flex: 0 1 auto; min-width: 0; padding: 4px 10px; font-size: 12px; justify-content: center; box-sizing: border-box; white-space: nowrap; background: transparent; border-color: var(--ws-border); }',
             'hic.span-btn { color: var(--ws-cyan); }',
             'hic.span-btn:hover { color: #fff; background: rgba(255,255,255,.07); border-color: var(--ws-border-hover); }',
             'hig.span-btn { color: var(--ws-gold); }',
@@ -191,7 +191,6 @@ window.__funny2_layout = window.__funny2_layout || {};
                     var fn = (typeof unsafeWindow !== 'undefined' && unsafeWindow.__extManualRelogin) || window.__extManualRelogin;
                     if (fn) fn();
                 })
-                $('<hio class="span-btn"></hio>').append("帮会").click(toSchoolBP)
             ),
             $("<div></div>")
         );

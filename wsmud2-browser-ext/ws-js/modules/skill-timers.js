@@ -254,19 +254,6 @@ function showBuffDuration(sid, duration, id, count = 0, overtime = 0) {
         // 延时100毫秒，等待元素刷新
         const elements = document.querySelectorAll(`.room-item[itemid="${id}"] .status-item[sid="${sid}"]`);
 
-    const key = getBuffTimerKey(sid, id);
-
-    // 【2026-09-07 防抖】战斗中同一 BUFF 会被高频推送（items/status），100ms 内只保留
-    // 最后一次处理，避免反复"移除旧浮层→重渲染"造成的图标高频闪烁
-    if (_buffDebounce[key]) {
-        clearTimeout(_buffDebounce[key]);
-    }
-    _buffDebounce[key] = setTimeout(() => {
-        delete _buffDebounce[key];
-
-        // 延时100毫秒，等待元素刷新
-        const elements = document.querySelectorAll(`.room-item[itemid="${id}"] .status-item[sid="${sid}"]`);
-
         // 【2026-09-08】"找不到"是预期竞态（BUFF 在 100ms 防抖内已过期/物品已离房），
         // 静默返回即可，不再作为告警刷屏（清理逻辑见 clearBuffDisplayByItem）
         if (elements.length === 0) { ExtLog.log(`BUFF元素已消失，跳过: sid=${sid}, id=${id}`); return; }

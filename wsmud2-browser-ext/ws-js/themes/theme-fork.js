@@ -221,13 +221,15 @@
       .span-btn,
       .hic.span-btn, .hig.span-btn, .hiz.span-btn, .hio.span-btn,
       .hir.span-btn, .hiy.span-btn, .hip.span-btn {
-        display: inline-block !important;
+        display: inline-flex !important;
+        align-items: center !important;
+        justify-content: center !important;
         text-align: center !important;
         border: 1px solid #666666 !important;
         border-radius: 3px !important;
-        padding: 4px 6px !important;
+        padding: 4px 10px !important;
         font-size: 12px !important;
-        margin: 0 4px 4px 0 !important;
+        margin: 0 !important;
         background: #000000 !important;
         color: #999999 !important;
         transition: color .15s ease, border-color .15s ease, background .15s ease !important;
@@ -315,10 +317,10 @@
 
     // ===== Master 额外清掉的污染样式 =====
     addThemeStyle(`
-      /* WG_right_log 字体继承游戏 */
-      .WG_right_log > pre { font-family: inherit !important; font-size: inherit !important; }
-      /* 日志区 WG_right_log 内部 pre 也继承游戏字体（不设 line-height，与主题1的默认紧凑行距保持一致） */
-      .right > .WG_right_log pre { font-family: inherit !important; font-size: inherit !important; color: #c0c0c0 !important; }
+      /* WG_right_log 字体：JetBrains Mono，缺失时回退等宽字体 */
+      .WG_right_log > pre { font-family: 'JetBrains Mono', monospace !important; font-size: inherit !important; }
+      /* 日志区 WG_right_log 内部 pre 同样使用 JetBrains Mono（不设 line-height，与主题1的默认紧凑行距保持一致） */
+      .right > .WG_right_log pre { font-family: 'JetBrains Mono', monospace !important; font-size: inherit !important; color: #c0c0c0 !important; }
       .content-message pre { font-family: inherit !important; font-size: inherit !important; line-height: 1.65 !important; }
     `);
 
